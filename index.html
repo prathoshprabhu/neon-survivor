@@ -1,0 +1,2675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON SURVIVOR | 2087</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-cyan: #00f7ff;
+            --neon-pink: #ff00aa;
+            --neon-purple: #9d00ff;
+            --neon-green: #00ff6a;
+            --neon-orange: #ff6a00;
+            --neon-yellow: #f7ff00;
+            --dark-bg: #0a0a12;
+            --darker-bg: #050508;
+            --panel-bg: rgba(10, 10, 18, 0.9);
+        }
+
+        body {
+            background: var(--dark-bg);
+            overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
+            color: #fff;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: 
+                radial-gradient(ellipse at 50% 50%, rgba(157, 0, 255, 0.1) 0%, transparent 50%),
+                linear-gradient(180deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* HUD Styles */
+        .hud {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .hud-interactive {
+            pointer-events: auto;
+        }
+
+        /* Top Left - Player Stats */
+        #playerStats {
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stat-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-cyan);
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.3);
+        }
+
+        .stat-bar-container {
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .stat-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+        }
+
+        #healthBar .stat-bar-fill {
+            background: linear-gradient(90deg, #ff0044, #ff4466);
+            box-shadow: 0 0 20px rgba(255, 0, 68, 0.5);
+        }
+
+        #shieldBar .stat-bar-fill {
+            background: linear-gradient(90deg, var(--neon-cyan), #66f7ff);
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.5);
+        }
+
+        #xpBar .stat-bar-fill {
+            background: linear-gradient(90deg, var(--neon-purple), #c466ff);
+            box-shadow: 0 0 20px rgba(157, 0, 255, 0.5);
+        }
+
+        .stat-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 12px;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px var(--neon-cyan);
+            min-width: 60px;
+        }
+
+        /* Top Right - Resources */
+        #resources {
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .resource-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 15px;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            min-width: 70px;
+        }
+
+        .resource-item.wood {
+            border-color: #8b5a2b;
+            box-shadow: 0 0 15px rgba(139, 90, 43, 0.3);
+        }
+
+        .resource-item.stone {
+            border-color: #808080;
+            box-shadow: 0 0 15px rgba(128, 128, 128, 0.3);
+        }
+
+        .resource-item.metal {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 247, 255, 0.3);
+        }
+
+        .resource-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .resource-count {
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* Bottom Center - Weapon Wheel */
+        #weaponBar {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .weapon-slot {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .weapon-slot:hover {
+            background: rgba(157, 0, 255, 0.2);
+        }
+
+        .weapon-slot.active {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.5), inset 0 0 20px rgba(0, 247, 255, 0.1);
+        }
+
+        .weapon-slot.locked {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .weapon-icon {
+            font-size: 24px;
+        }
+
+        .weapon-key {
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            font-family: 'Orbitron', monospace;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .weapon-ammo {
+            font-family: 'Orbitron', monospace;
+            font-size: 10px;
+            color: var(--neon-orange);
+        }
+
+        /* Bottom Left - Ammo & Tools */
+        #toolBar {
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tool-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .ammo-display {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            color: var(--neon-orange);
+            text-shadow: 0 0 15px var(--neon-orange);
+        }
+
+        .ammo-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Bottom Right - Kill Count & Score */
+        #scorePanel {
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            padding: 15px 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-pink);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(255, 0, 170, 0.2);
+        }
+
+        .score-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .score-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--neon-pink);
+            text-shadow: 0 0 20px var(--neon-pink);
+        }
+
+        .kills-display {
+            margin-top: 10px;
+            font-family: 'Orbitron', monospace;
+            font-size: 14px;
+            color: var(--neon-green);
+        }
+
+        /* Crafting Panel */
+        #craftingPanel {
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            padding: 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-purple);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(157, 0, 255, 0.2);
+        }
+
+        .crafting-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 14px;
+            color: var(--neon-purple);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .craft-button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: rgba(157, 0, 255, 0.1);
+            border: 1px solid var(--neon-purple);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+        }
+
+        .craft-button:hover:not(:disabled) {
+            background: rgba(157, 0, 255, 0.3);
+            box-shadow: 0 0 20px rgba(157, 0, 255, 0.5);
+        }
+
+        .craft-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .craft-recipe {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Wave Indicator */
+        #waveIndicator {
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .wave-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 30px var(--neon-cyan);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+
+        .wave-enemies {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Cosmetics Panel */
+        #cosmeticsPanel {
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            padding: 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-green);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0, 255, 106, 0.2);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .cosmetics-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 14px;
+            color: var(--neon-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .cosmetic-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background: rgba(0, 255, 106, 0.05);
+            border: 1px solid rgba(0, 255, 106, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+        }
+
+        .cosmetic-item:hover {
+            background: rgba(0, 255, 106, 0.15);
+        }
+
+        .cosmetic-item.active {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 15px rgba(0, 255, 106, 0.3);
+        }
+
+        .cosmetic-item.locked {
+            opacity: 0.4;
+        }
+
+        .cosmetic-icon {
+            font-size: 20px;
+        }
+
+        .cosmetic-name {
+            font-size: 12px;
+            flex: 1;
+        }
+
+        .cosmetic-effect {
+            font-size: 10px;
+            color: var(--neon-yellow);
+        }
+
+        /* Start Screen */
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: 
+                radial-gradient(ellipse at 50% 30%, rgba(157, 0, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 247, 255, 0.1) 0%, transparent 40%),
+                var(--darker-bg);
+            z-index: 100;
+        }
+
+        .game-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 72px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+            filter: drop-shadow(0 0 30px rgba(157, 0, 255, 0.5));
+            margin-bottom: 10px;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { filter: drop-shadow(0 0 30px rgba(157, 0, 255, 0.5)); }
+            50% { filter: drop-shadow(0 0 50px rgba(0, 247, 255, 0.7)); }
+        }
+
+        .game-subtitle {
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            color: var(--neon-cyan);
+            letter-spacing: 10px;
+            margin-bottom: 50px;
+        }
+
+        .start-button {
+            padding: 20px 60px;
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, rgba(157, 0, 255, 0.3), rgba(0, 247, 255, 0.3));
+            border: 2px solid var(--neon-cyan);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+
+        .start-button:hover {
+            background: linear-gradient(135deg, rgba(157, 0, 255, 0.5), rgba(0, 247, 255, 0.5));
+            box-shadow: 0 0 50px rgba(0, 247, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        .controls-info {
+            margin-top: 40px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+        }
+
+        .controls-info span {
+            color: var(--neon-cyan);
+            font-family: 'Orbitron', monospace;
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 5, 8, 0.95);
+            z-index: 100;
+        }
+
+        .game-over-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 64px;
+            font-weight: 900;
+            color: #ff0044;
+            text-shadow: 0 0 50px rgba(255, 0, 68, 0.7);
+            margin-bottom: 20px;
+        }
+
+        .final-score {
+            font-family: 'Orbitron', monospace;
+            font-size: 36px;
+            color: var(--neon-purple);
+            margin-bottom: 40px;
+        }
+
+        /* Floating damage numbers */
+        .damage-number {
+            position: absolute;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
+
+        /* Upgrade notification */
+        #upgradeNotification {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: linear-gradient(135deg, rgba(0, 255, 106, 0.2), rgba(0, 247, 255, 0.2));
+            border: 2px solid var(--neon-green);
+            border-radius: 12px;
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            color: var(--neon-green);
+            text-shadow: 0 0 20px var(--neon-green);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 50;
+        }
+
+        #upgradeNotification.show {
+            opacity: 1;
+            animation: pulseNotif 0.5s ease;
+        }
+
+        @keyframes pulseNotif {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--neon-purple);
+            border-radius: 3px;
+        }
+
+        /* Shop Screen */
+        #shopScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: 
+                radial-gradient(ellipse at 30% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 40%),
+                radial-gradient(ellipse at 70% 80%, rgba(157, 0, 255, 0.1) 0%, transparent 40%),
+                var(--darker-bg);
+            z-index: 100;
+        }
+
+        .shop-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 48px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffd700, #ff6a00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .shop-coins {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            color: #ffd700;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .shop-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .shop-section {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 300px;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            color: var(--neon-cyan);
+            text-align: center;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .chests-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chest-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chest-item:hover:not(.disabled) {
+            transform: translateX(5px);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.3);
+        }
+
+        .chest-item.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .chest-icon {
+            font-size: 32px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .chest-info {
+            flex: 1;
+        }
+
+        .chest-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .chest-odds {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .chest-cost {
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            color: #ffd700;
+        }
+
+        .pets-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .pet-slot {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .pet-slot:hover {
+            transform: scale(1.1);
+        }
+
+        .pet-slot.selected {
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .pet-slot.empty {
+            opacity: 0.3;
+        }
+
+        .pet-icon-large {
+            font-size: 28px;
+        }
+
+        .pet-rarity-dot {
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .equipped-pet {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .equipped-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .equipped-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .equipped-icon {
+            font-size: 36px;
+        }
+
+        .equipped-details {
+            text-align: left;
+        }
+
+        .equipped-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+        }
+
+        .equipped-effect {
+            font-size: 12px;
+            color: var(--neon-green);
+        }
+
+        .shop-buttons {
+            display: flex;
+            gap: 20px;
+        }
+
+        .play-button {
+            padding: 15px 50px;
+            font-family: 'Orbitron', monospace;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, rgba(0, 255, 106, 0.3), rgba(0, 247, 255, 0.3));
+            border: 2px solid var(--neon-green);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .play-button:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 106, 0.5), rgba(0, 247, 255, 0.5));
+            box-shadow: 0 0 40px rgba(0, 255, 106, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Chest Opening Animation */
+        #chestOpenModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 200;
+        }
+
+        .chest-reveal {
+            text-align: center;
+            animation: revealPop 0.5s ease;
+        }
+
+        @keyframes revealPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .reveal-icon {
+            font-size: 120px;
+            margin-bottom: 20px;
+            animation: floatBounce 2s ease-in-out infinite;
+        }
+
+        @keyframes floatBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .reveal-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .reveal-rarity {
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+        }
+
+        .reveal-effect {
+            font-size: 16px;
+            color: var(--neon-green);
+            margin-bottom: 30px;
+        }
+
+        .reveal-close {
+            padding: 12px 40px;
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reveal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Pet display in game */
+        #activePetDisplay {
+            top: 170px;
+            left: 20px;
+            padding: 10px 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-green);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .active-pet-icon {
+            font-size: 28px;
+        }
+
+        .active-pet-info {
+            font-size: 12px;
+        }
+
+        .active-pet-name {
+            font-family: 'Orbitron', monospace;
+            color: var(--neon-green);
+        }
+
+        .active-pet-effect {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Shop Screen -->
+        <div id="shopScreen">
+            <h1 class="shop-title">🏪 PET SHOP</h1>
+            <div class="shop-coins">💰 <span id="shopCoins">0</span> COINS</div>
+            
+            <div class="shop-container">
+                <div class="shop-section">
+                    <div class="section-title">📦 Chests</div>
+                    <div class="chests-grid" id="chestsGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <div class="shop-section">
+                    <div class="section-title">🐾 Your Pets</div>
+                    <div class="pets-grid" id="petsGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div class="equipped-pet" id="equippedPetDisplay">
+                        <div class="equipped-label">Equipped</div>
+                        <div class="equipped-info" id="equippedInfo">
+                            <span style="color: rgba(255,255,255,0.4)">No pet equipped</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="shop-buttons">
+                <button class="play-button" onclick="startGameFromShop()">⚔️ PLAY</button>
+            </div>
+        </div>
+
+        <!-- Chest Opening Modal -->
+        <div id="chestOpenModal">
+            <div class="chest-reveal">
+                <div class="reveal-icon" id="revealIcon">🐺</div>
+                <div class="reveal-name" id="revealName">Wolf Pup</div>
+                <div class="reveal-rarity" id="revealRarity">COMMON</div>
+                <div class="reveal-effect" id="revealEffect">+5% enemy visibility</div>
+                <button class="reveal-close" onclick="closeChestModal()">AWESOME!</button>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="startScreen">
+            <h1 class="game-title">NEON SURVIVOR</h1>
+            <p class="game-subtitle">YEAR 2087</p>
+            <button class="start-button" onclick="startGame()">INITIATE</button>
+            <div class="controls-info">
+                <p><span>WASD / Arrow Keys</span> Move | <span>MOUSE</span> Aim | <span>CLICK</span> Fire | <span>1-7</span> Weapons</p>
+                <p><span>E</span> Use Pickaxe | <span>R</span> Reload | <span>C</span> Craft Ammo</p>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen">
+            <h1 class="game-over-title">TERMINATED</h1>
+            <p class="final-score">SCORE: <span id="finalScore">0</span></p>
+            <button class="start-button" onclick="restartGame()">REINITIALIZE</button>
+        </div>
+
+        <!-- HUD Elements -->
+        <div id="playerStats" class="hud">
+            <div class="stat-bar" id="healthBar">
+                <div class="stat-icon">❤️</div>
+                <div class="stat-bar-container">
+                    <div class="stat-bar-fill" style="width: 100%"></div>
+                </div>
+                <span class="stat-text">100/100</span>
+            </div>
+            <div class="stat-bar" id="shieldBar">
+                <div class="stat-icon">🛡️</div>
+                <div class="stat-bar-container">
+                    <div class="stat-bar-fill" style="width: 0%"></div>
+                </div>
+                <span class="stat-text">0/100</span>
+            </div>
+            <div class="stat-bar" id="xpBar">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-bar-container">
+                    <div class="stat-bar-fill" style="width: 0%"></div>
+                </div>
+                <span class="stat-text">LVL 1</span>
+            </div>
+        </div>
+
+        <div id="resources" class="hud">
+            <div class="resource-item wood">
+                <span class="resource-icon">🪵</span>
+                <span class="resource-count" id="woodCount">0</span>
+            </div>
+            <div class="resource-item stone">
+                <span class="resource-icon">🪨</span>
+                <span class="resource-count" id="stoneCount">0</span>
+            </div>
+            <div class="resource-item metal">
+                <span class="resource-icon">⚙️</span>
+                <span class="resource-count" id="metalCount">0</span>
+            </div>
+        </div>
+
+        <div id="waveIndicator" class="hud">
+            <div class="wave-text">WAVE <span id="waveNumber">1</span></div>
+            <div class="wave-enemies">Enemies: <span id="enemyCount">0</span></div>
+        </div>
+
+        <div id="weaponBar" class="hud">
+            <!-- Weapons will be populated by JS -->
+        </div>
+
+        <div id="toolBar" class="hud">
+            <div class="tool-item">
+                <span style="font-size: 24px;">⛏️</span>
+                <div>
+                    <div class="ammo-label">PICKAXE</div>
+                    <div style="font-size: 12px; color: var(--neon-green);">Press E near resources</div>
+                </div>
+            </div>
+            <div class="tool-item">
+                <div class="ammo-display" id="totalAmmo">50</div>
+                <div>
+                    <div class="ammo-label">TOTAL AMMO</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="scorePanel" class="hud">
+            <div class="score-label">SCORE</div>
+            <div class="score-value" id="scoreDisplay">0</div>
+            <div class="kills-display">KILLS: <span id="killCount">0</span></div>
+        </div>
+
+        <div id="craftingPanel" class="hud hud-interactive">
+            <div class="crafting-title">⚒️ CRAFT</div>
+            <button class="craft-button" id="craftAmmoBtn" onclick="craftAmmo()">
+                <span>📦 Ammo Crate</span>
+                <span class="craft-recipe">5🪨 2🪵 10⚙️</span>
+            </button>
+        </div>
+
+        <div id="cosmeticsPanel" class="hud hud-interactive">
+            <div class="cosmetics-title">🎨 SKINS</div>
+            <div id="cosmeticsList">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div id="upgradeNotification">🎯 NEW WEAPON UNLOCKED!</div>
+
+        <div id="activePetDisplay" class="hud" style="display: none;">
+            <span class="active-pet-icon" id="gamePetIcon">🐺</span>
+            <div class="active-pet-info">
+                <div class="active-pet-name" id="gamePetName">Wolf Pup</div>
+                <div class="active-pet-effect" id="gamePetEffect">+5% vision</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // GAME CONFIGURATION
+        // ============================================
+        const CONFIG = {
+            PLAYER_SPEED: 5,
+            PLAYER_SIZE: 25,
+            ENEMY_BASE_SPEED: 2,
+            BULLET_SPEED: 15,
+            XP_PER_KILL: 25,
+            XP_PER_LEVEL: 100,
+            RESOURCE_SPAWN_RATE: 5000,
+            ENEMY_SPAWN_RATE: 2500,
+            WAVE_ENEMY_INCREASE: 3,
+        };
+
+        // ============================================
+        // WEAPONS DATA
+        // ============================================
+        const WEAPONS = [
+            { id: 0, name: 'Revolver', icon: '🔫', damage: 25, fireRate: 400, ammoPerShot: 1, range: 400, unlocked: true, spread: 0, projectiles: 1 },
+            { id: 1, name: 'Combat Knife', icon: '🔪', damage: 50, fireRate: 200, ammoPerShot: 0, range: 60, unlocked: false, melee: true, spread: 0, projectiles: 1 },
+            { id: 2, name: '.44 Magnum', icon: '💥', damage: 60, fireRate: 600, ammoPerShot: 1, range: 500, unlocked: false, spread: 0, projectiles: 1 },
+            { id: 3, name: 'Assault Rifle', icon: '🔫', damage: 20, fireRate: 100, ammoPerShot: 1, range: 450, unlocked: false, spread: 5, projectiles: 1 },
+            { id: 4, name: 'Sniper', icon: '🎯', damage: 150, fireRate: 1200, ammoPerShot: 1, range: 800, unlocked: false, spread: 0, projectiles: 1, piercing: true },
+            { id: 5, name: 'Plasma Katana', icon: '⚔️', damage: 80, fireRate: 300, ammoPerShot: 0, range: 80, unlocked: false, melee: true, spread: 45, projectiles: 1 },
+            { id: 6, name: 'Railgun', icon: '⚡', damage: 200, fireRate: 2000, ammoPerShot: 5, range: 1000, unlocked: false, spread: 0, projectiles: 1, piercing: true, laser: true },
+        ];
+
+        // ============================================
+        // PETS DATA
+        // ============================================
+        const PETS = [
+            // Common
+            { id: 0, name: 'Wolf Pup', icon: '🐺', rarity: 'common', color: '#808080', effect: 'Scout', description: '+5% enemy visibility', statBonus: { vision: 0.05 } },
+            { id: 1, name: 'Fox', icon: '🦊', rarity: 'common', color: '#ff6a00', effect: 'Swift', description: '+3% speed', statBonus: { speed: 0.03 } },
+            { id: 2, name: 'Owl', icon: '🦉', rarity: 'common', color: '#8b5a2b', effect: 'Wise', description: '+5% XP', statBonus: { xp: 0.05 } },
+            { id: 3, name: 'Cat', icon: '🐱', rarity: 'common', color: '#f7ff00', effect: 'Lucky', description: '+5% loot', statBonus: { loot: 0.05 } },
+            // Rare
+            { id: 4, name: 'Alpha Wolf', icon: '🐺', rarity: 'rare', color: '#00f7ff', effect: 'Pack Leader', description: '+8% damage', statBonus: { damage: 0.08 } },
+            { id: 5, name: 'Phoenix Chick', icon: '🔥', rarity: 'rare', color: '#ff6a00', effect: 'Rebirth', description: '+1 revive', statBonus: { revive: 1 } },
+            { id: 6, name: 'Storm Hawk', icon: '🦅', rarity: 'rare', color: '#9d00ff', effect: 'Lightning', description: 'Chance to zap enemies', statBonus: { zap: 0.1 } },
+            { id: 7, name: 'Gazelle', icon: '🦌', rarity: 'rare', color: '#00ff6a', effect: 'Grace', description: '+10% speed', statBonus: { speed: 0.1 } },
+            // Epic
+            { id: 8, name: 'Dragon Whelp', icon: '🐉', rarity: 'epic', color: '#ff0044', effect: 'Flames', description: 'Burns nearby enemies', statBonus: { burn: 5 } },
+            { id: 9, name: 'Shadow Panther', icon: '🐆', rarity: 'epic', color: '#9d00ff', effect: 'Stealth', description: '-20% enemy aggro', statBonus: { stealth: 0.2 } },
+            { id: 10, name: 'Crystal Golem', icon: '💎', rarity: 'epic', color: '#00f7ff', effect: 'Shield', description: '+25 shield regen', statBonus: { shieldRegen: 25 } },
+            { id: 11, name: 'Thunder Tiger', icon: '🐅', rarity: 'epic', color: '#f7ff00', effect: 'Roar', description: '+15% damage', statBonus: { damage: 0.15 } },
+            // Legendary
+            { id: 12, name: 'Ancient Dragon', icon: '🐲', rarity: 'legendary', color: '#ff0044', effect: 'Inferno', description: 'Massive fire damage', statBonus: { burn: 15, damage: 0.2 } },
+            { id: 13, name: 'Void Phoenix', icon: '🌟', rarity: 'legendary', color: '#ff00aa', effect: 'Immortal', description: '+3 revives', statBonus: { revive: 3 } },
+            { id: 14, name: 'Cosmic Serpent', icon: '🐍', rarity: 'legendary', color: '#9d00ff', effect: 'Venom', description: 'Poison all enemies', statBonus: { poison: 10 } },
+            { id: 15, name: 'Clone', icon: '👤', rarity: 'legendary', color: '#00f7ff', effect: 'Doppelganger', description: 'Fights alongside you', statBonus: { clone: true } },
+            // Mythic
+            { id: 16, name: 'Celestial Guardian', icon: '👼', rarity: 'mythic', color: '#f7ff00', effect: 'Divine', description: 'All stats +20%', statBonus: { allStats: 0.2 } },
+            { id: 17, name: 'Chaos Entity', icon: '👁️', rarity: 'mythic', color: '#ff00aa', effect: 'Reality Warp', description: 'Random powerful effects', statBonus: { chaos: true } },
+        ];
+
+        const CHESTS = [
+            { id: 0, name: 'Bronze Chest', cost: 50, color: '#cd7f32', rarityWeights: { common: 80, rare: 18, epic: 2, legendary: 0, mythic: 0 } },
+            { id: 1, name: 'Silver Chest', cost: 150, color: '#c0c0c0', rarityWeights: { common: 50, rare: 40, epic: 9, legendary: 1, mythic: 0 } },
+            { id: 2, name: 'Gold Chest', cost: 400, color: '#ffd700', rarityWeights: { common: 20, rare: 40, epic: 30, legendary: 9, mythic: 1 } },
+            { id: 3, name: 'Diamond Chest', cost: 1000, color: '#00f7ff', rarityWeights: { common: 0, rare: 20, epic: 45, legendary: 30, mythic: 5 } },
+            { id: 4, name: 'Cosmic Chest', cost: 2500, color: '#ff00aa', rarityWeights: { common: 0, rare: 0, epic: 30, legendary: 50, mythic: 20 } },
+        ];
+
+        const RARITY_COLORS = {
+            common: '#808080',
+            rare: '#00f7ff',
+            epic: '#9d00ff',
+            legendary: '#ffd700',
+            mythic: '#ff00aa',
+        };
+
+        // ============================================
+        // COSMETICS DATA
+        // ============================================
+        const COSMETICS = [
+            { id: 0, name: 'Default', icon: '🔵', color: '#00f7ff', effect: 'None', unlocked: true },
+            { id: 1, name: 'Phantom', icon: '👻', color: '#9d00ff', effect: '+10% Speed', speedBonus: 0.1, unlocked: false, unlockKills: 10 },
+            { id: 2, name: 'Inferno', icon: '🔥', color: '#ff6a00', effect: '+15% Damage', damageBonus: 0.15, unlocked: false, unlockKills: 25 },
+            { id: 3, name: 'Frost', icon: '❄️', color: '#66f7ff', effect: 'Slow enemies', slowEffect: true, unlocked: false, unlockKills: 50 },
+            { id: 4, name: 'Toxic', icon: '☠️', color: '#00ff6a', effect: 'Poison trail', poisonTrail: true, unlocked: false, unlockKills: 75 },
+            { id: 5, name: 'Nova', icon: '💫', color: '#f7ff00', effect: '+25% XP', xpBonus: 0.25, unlocked: false, unlockKills: 100 },
+            { id: 6, name: 'Void', icon: '🌑', color: '#ff00aa', effect: 'All bonuses', allBonus: true, unlocked: false, unlockKills: 150 },
+        ];
+
+        // ============================================
+        // GAME STATE
+        // ============================================
+        let canvas, ctx;
+        let gameRunning = false;
+        let animationId;
+
+        let player = {
+            x: 0,
+            y: 0,
+            health: 100,
+            maxHealth: 100,
+            shield: 0,
+            maxShield: 100,
+            xp: 0,
+            level: 1,
+            currentWeapon: 0,
+            ammo: 50,
+            kills: 0,
+            score: 0,
+            cosmetic: 0,
+            angle: 0,
+            lastShot: 0,
+        };
+
+        let resources = {
+            wood: 0,
+            stone: 0,
+            metal: 0,
+        };
+
+        let enemies = [];
+        let bullets = [];
+        let particles = [];
+        let resourceNodes = [];
+        let damageNumbers = [];
+        let meleeSwings = [];
+
+        let keys = {};
+        let mouse = { x: 0, y: 0, down: false };
+        let camera = { x: 0, y: 0 };
+
+        // Pet system
+        let playerData = {
+            coins: 0,
+            ownedPets: [],
+            equippedPet: null,
+        };
+
+        let activePet = null;
+        let clonePet = null;
+
+        let wave = 1;
+        let enemiesThisWave = 5;
+        let enemiesSpawned = 0;
+        let enemiesKilled = 0;
+        let lastEnemySpawn = 0;
+        let lastResourceSpawn = 0;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Load saved data
+            loadPlayerData();
+            
+            // Input handlers
+            document.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                
+                // Weapon switching
+                if (e.key >= '1' && e.key <= '7') {
+                    const weaponIndex = parseInt(e.key) - 1;
+                    if (WEAPONS[weaponIndex] && WEAPONS[weaponIndex].unlocked) {
+                        player.currentWeapon = weaponIndex;
+                        updateWeaponBar();
+                    }
+                }
+                
+                // Crafting
+                if (e.key.toLowerCase() === 'c') {
+                    craftAmmo();
+                }
+                
+                // Pickaxe
+                if (e.key.toLowerCase() === 'e') {
+                    usePickaxe();
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+                mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            });
+            
+            canvas.addEventListener('mousedown', () => mouse.down = true);
+            canvas.addEventListener('mouseup', () => mouse.down = false);
+            
+            initUI();
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function initUI() {
+            updateWeaponBar();
+            updateCosmeticsList();
+        }
+
+        function updateWeaponBar() {
+            const bar = document.getElementById('weaponBar');
+            bar.innerHTML = WEAPONS.map((w, i) => `
+                <div class="weapon-slot ${w.unlocked ? '' : 'locked'} ${i === player.currentWeapon ? 'active' : ''}" 
+                     onclick="selectWeapon(${i})">
+                    <span class="weapon-key">${i + 1}</span>
+                    <span class="weapon-icon">${w.icon}</span>
+                    ${!w.melee ? `<span class="weapon-ammo">${w.ammoPerShot > 0 ? w.ammoPerShot : '∞'}</span>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function updateCosmeticsList() {
+            const list = document.getElementById('cosmeticsList');
+            list.innerHTML = COSMETICS.map((c, i) => `
+                <div class="cosmetic-item ${c.unlocked ? '' : 'locked'} ${i === player.cosmetic ? 'active' : ''}"
+                     onclick="selectCosmetic(${i})">
+                    <span class="cosmetic-icon">${c.icon}</span>
+                    <span class="cosmetic-name">${c.name}</span>
+                    <span class="cosmetic-effect">${c.unlocked ? c.effect : `🔒 ${c.unlockKills} kills`}</span>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // GAME CONTROLS
+        // ============================================
+        function startGame() {
+            showShop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            // Add score as coins
+            addCoins(player.score);
+            showShop();
+        }
+
+        function resetGame() {
+            player = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                health: 150,
+                maxHealth: 150,
+                shield: 50,
+                maxShield: 100,
+                xp: 0,
+                level: 1,
+                currentWeapon: 0,
+                ammo: 75,
+                kills: 0,
+                score: 0,
+                cosmetic: player.cosmetic,
+                angle: 0,
+                lastShot: 0,
+                invincible: Date.now() + 3000,
+                revives: hasPetRevive(),
+            };
+            
+            // Initialize clone if pet has clone ability
+            if (hasPetClone()) {
+                clonePet = {
+                    x: player.x + 50,
+                    y: player.y + 50,
+                    angle: 0,
+                    lastShot: 0,
+                };
+            } else {
+                clonePet = null;
+            }
+            
+            resources = { wood: 0, stone: 0, metal: 0 };
+            enemies = [];
+            bullets = [];
+            particles = [];
+            resourceNodes = [];
+            damageNumbers = [];
+            meleeSwings = [];
+            
+            wave = 1;
+            enemiesThisWave = 5;
+            enemiesSpawned = 0;
+            enemiesKilled = 0;
+            
+            // Reset weapons
+            WEAPONS.forEach((w, i) => w.unlocked = i === 0);
+            
+            // Spawn initial resources
+            for (let i = 0; i < 10; i++) {
+                spawnResourceNode();
+            }
+            
+            updateUI();
+            updateWeaponBar();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(animationId);
+            document.getElementById('finalScore').textContent = player.score;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+
+        function selectWeapon(index) {
+            if (WEAPONS[index] && WEAPONS[index].unlocked) {
+                player.currentWeapon = index;
+                updateWeaponBar();
+            }
+        }
+
+        function selectCosmetic(index) {
+            if (COSMETICS[index] && COSMETICS[index].unlocked) {
+                player.cosmetic = index;
+                updateCosmeticsList();
+            }
+        }
+
+        // ============================================
+        // GAME LOOP
+        // ============================================
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            update();
+            render();
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            const now = Date.now();
+            
+            // Player movement
+            updatePlayer();
+            
+            // Shooting
+            if (mouse.down) {
+                shoot(now);
+            }
+            
+            // Update entities
+            updateBullets();
+            updateEnemies();
+            updateParticles();
+            updateMeleeSwings();
+            
+            // Spawning
+            if (now - lastEnemySpawn > CONFIG.ENEMY_SPAWN_RATE && enemiesSpawned < enemiesThisWave) {
+                spawnEnemy();
+                lastEnemySpawn = now;
+            }
+            
+            if (now - lastResourceSpawn > CONFIG.RESOURCE_SPAWN_RATE) {
+                if (resourceNodes.length < 15) {
+                    spawnResourceNode();
+                }
+                lastResourceSpawn = now;
+            }
+            
+            // Wave completion
+            if (enemiesKilled >= enemiesThisWave) {
+                nextWave();
+            }
+            
+            // Update clone pet
+            if (clonePet) {
+                updateClonePet();
+            }
+            
+            // Update pet effects (burn, etc.)
+            updatePetEffects();
+            
+            // Camera
+            camera.x = player.x - canvas.width / 2;
+            camera.y = player.y - canvas.height / 2;
+            
+            updateUI();
+        }
+
+        function updatePlayer() {
+            const cosmetic = COSMETICS[player.cosmetic];
+            let speed = CONFIG.PLAYER_SPEED;
+            
+            if (cosmetic.speedBonus) speed *= (1 + cosmetic.speedBonus);
+            if (cosmetic.allBonus) speed *= 1.1;
+            speed *= (1 + getPetSpeedBonus());
+            
+            if (keys['w'] || keys['arrowup']) player.y -= speed;
+            if (keys['s'] || keys['arrowdown']) player.y += speed;
+            if (keys['a'] || keys['arrowleft']) player.x -= speed;
+            if (keys['d'] || keys['arrowright']) player.x += speed;
+            
+            // Calculate angle to mouse
+            const worldMouseX = mouse.x + camera.x;
+            const worldMouseY = mouse.y + camera.y;
+            player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
+            
+            // Poison trail
+            if (cosmetic.poisonTrail && Math.random() < 0.1) {
+                createParticle(player.x, player.y, '#00ff6a', 20, 60);
+            }
+        }
+
+        function shoot(now) {
+            const weapon = WEAPONS[player.currentWeapon];
+            
+            if (now - player.lastShot < weapon.fireRate) return;
+            if (weapon.ammoPerShot > 0 && player.ammo < weapon.ammoPerShot) return;
+            
+            player.lastShot = now;
+            
+            if (weapon.ammoPerShot > 0) {
+                player.ammo -= weapon.ammoPerShot;
+            }
+            
+            if (weapon.melee) {
+                // Melee attack
+                meleeSwings.push({
+                    x: player.x,
+                    y: player.y,
+                    angle: player.angle,
+                    radius: weapon.range,
+                    spread: weapon.spread * Math.PI / 180,
+                    damage: weapon.damage,
+                    life: 10,
+                    maxLife: 10,
+                });
+                
+                // Check hits
+                enemies.forEach(enemy => {
+                    const dx = enemy.x - player.x;
+                    const dy = enemy.y - player.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < weapon.range + enemy.size) {
+                        const angleToEnemy = Math.atan2(dy, dx);
+                        let angleDiff = Math.abs(angleToEnemy - player.angle);
+                        if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+                        
+                        if (angleDiff < weapon.spread * Math.PI / 180 + 0.5) {
+                            damageEnemy(enemy, calculateDamage(weapon.damage));
+                        }
+                    }
+                });
+            } else {
+                // Ranged attack
+                const spread = weapon.spread * Math.PI / 180;
+                
+                for (let i = 0; i < weapon.projectiles; i++) {
+                    const angle = player.angle + (Math.random() - 0.5) * spread;
+                    
+                    bullets.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(angle) * CONFIG.BULLET_SPEED,
+                        vy: Math.sin(angle) * CONFIG.BULLET_SPEED,
+                        damage: calculateDamage(weapon.damage),
+                        range: weapon.range,
+                        traveled: 0,
+                        piercing: weapon.piercing,
+                        laser: weapon.laser,
+                        color: weapon.laser ? '#00f7ff' : '#ff6a00',
+                    });
+                }
+            }
+            
+            // Muzzle flash particles
+            for (let i = 0; i < 5; i++) {
+                createParticle(
+                    player.x + Math.cos(player.angle) * 30,
+                    player.y + Math.sin(player.angle) * 30,
+                    weapon.laser ? '#00f7ff' : '#ff6a00',
+                    10,
+                    15
+                );
+            }
+        }
+
+        function calculateDamage(baseDamage) {
+            const cosmetic = COSMETICS[player.cosmetic];
+            let damage = baseDamage;
+            
+            if (cosmetic.damageBonus) damage *= (1 + cosmetic.damageBonus);
+            if (cosmetic.allBonus) damage *= 1.15;
+            damage *= (1 + getPetDamageBonus());
+            
+            return Math.floor(damage);
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                bullet.traveled += CONFIG.BULLET_SPEED;
+                
+                if (bullet.traveled > bullet.range) return false;
+                
+                // Check enemy collision
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    const enemy = enemies[i];
+                    const dx = bullet.x - enemy.x;
+                    const dy = bullet.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < enemy.size) {
+                        damageEnemy(enemy, bullet.damage);
+                        
+                        if (!bullet.piercing) return false;
+                    }
+                }
+                
+                return true;
+            });
+        }
+
+        function updateEnemies() {
+            const cosmetic = COSMETICS[player.cosmetic];
+            
+            enemies.forEach(enemy => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                let speed = enemy.speed;
+                if (cosmetic.slowEffect) speed *= 0.7;
+                if (cosmetic.allBonus) speed *= 0.85;
+                
+                if (dist > 0) {
+                    enemy.x += (dx / dist) * speed;
+                    enemy.y += (dy / dist) * speed;
+                }
+                
+                // Damage player (with cooldown and invincibility check)
+                if (dist < CONFIG.PLAYER_SIZE + enemy.size && Date.now() > player.invincible) {
+                    if (!enemy.lastHit || Date.now() - enemy.lastHit > 500) {
+                        enemy.lastHit = Date.now();
+                        if (player.shield > 0) {
+                            player.shield = Math.max(0, player.shield - enemy.damage * 0.3);
+                        } else {
+                            player.health -= enemy.damage * 0.5;
+                        }
+                        
+                        // Knockback effect
+                        const knockAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                        player.x += Math.cos(knockAngle) * 30;
+                        player.y += Math.sin(knockAngle) * 30;
+                        
+                        // Brief invincibility after hit
+                        player.invincible = Date.now() + 200;
+                        
+                        // Hit particles
+                        for (let i = 0; i < 5; i++) {
+                            createParticle(player.x, player.y, '#ff0044', 15, 20);
+                        }
+                        
+                        if (player.health <= 0) {
+                            // Check for revive
+                            if (player.revives > 0) {
+                                player.revives--;
+                                player.health = player.maxHealth * 0.5;
+                                player.invincible = Date.now() + 2000;
+                                showNotification('🔥 PET REVIVED YOU!');
+                                for (let i = 0; i < 30; i++) {
+                                    createParticle(player.x, player.y, '#ffd700', 20, 40);
+                                }
+                            } else {
+                                gameOver();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function damageEnemy(enemy, damage) {
+            enemy.health -= damage;
+            
+            // Damage number
+            damageNumbers.push({
+                x: enemy.x,
+                y: enemy.y,
+                text: damage,
+                life: 60,
+                color: '#ff6a00',
+            });
+            
+            // Hit particles
+            for (let i = 0; i < 3; i++) {
+                createParticle(enemy.x, enemy.y, enemy.color, 15, 20);
+            }
+            
+            if (enemy.health <= 0) {
+                killEnemy(enemy);
+            }
+        }
+
+        function killEnemy(enemy) {
+            const index = enemies.indexOf(enemy);
+            if (index > -1) {
+                enemies.splice(index, 1);
+            }
+            
+            player.kills++;
+            enemiesKilled++;
+            
+            const cosmetic = COSMETICS[player.cosmetic];
+            let xp = CONFIG.XP_PER_KILL;
+            if (cosmetic.xpBonus) xp *= (1 + cosmetic.xpBonus);
+            if (cosmetic.allBonus) xp *= 1.25;
+            xp *= (1 + getPetXPBonus());
+            
+            player.xp += xp;
+            player.score += enemy.score;
+            
+            // Level up
+            while (player.xp >= CONFIG.XP_PER_LEVEL) {
+                player.xp -= CONFIG.XP_PER_LEVEL;
+                player.level++;
+                levelUp();
+            }
+            
+            // Death particles
+            for (let i = 0; i < 15; i++) {
+                createParticle(enemy.x, enemy.y, enemy.color, 30, 40);
+            }
+            
+            // Check cosmetic unlocks
+            COSMETICS.forEach((c, i) => {
+                if (!c.unlocked && player.kills >= c.unlockKills) {
+                    c.unlocked = true;
+                    showNotification(`🎨 ${c.name} SKIN UNLOCKED!`);
+                    updateCosmeticsList();
+                }
+            });
+        }
+
+        function levelUp() {
+            player.maxHealth += 10;
+            player.health = player.maxHealth;
+            player.shield = Math.min(player.shield + 25, player.maxShield);
+            
+            // Unlock weapons at certain levels
+            const unlockLevels = [1, 3, 5, 8, 12, 18, 25];
+            const weaponIndex = unlockLevels.findIndex(l => l === player.level);
+            
+            if (weaponIndex > 0 && WEAPONS[weaponIndex] && !WEAPONS[weaponIndex].unlocked) {
+                WEAPONS[weaponIndex].unlocked = true;
+                showNotification(`🔫 ${WEAPONS[weaponIndex].name} UNLOCKED!`);
+                updateWeaponBar();
+            }
+        }
+
+        function updateParticles() {
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                p.size *= 0.95;
+                return p.life > 0 && p.size > 0.5;
+            });
+        }
+
+        function updateMeleeSwings() {
+            meleeSwings = meleeSwings.filter(swing => {
+                swing.life--;
+                return swing.life > 0;
+            });
+        }
+
+        function createParticle(x, y, color, size, life) {
+            particles.push({
+                x, y, color,
+                size: size * Math.random(),
+                life: life,
+                maxLife: life,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+            });
+        }
+
+        // ============================================
+        // SPAWNING
+        // ============================================
+        function spawnEnemy() {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 800 + Math.random() * 300;
+            
+            const types = [
+                { name: 'Drone', size: 15, health: 30, speed: 3, damage: 5, color: '#ff00aa', score: 10 },
+                { name: 'Sentinel', size: 25, health: 80, speed: 2, damage: 10, color: '#9d00ff', score: 25 },
+                { name: 'Goliath', size: 40, health: 200, speed: 1.2, damage: 20, color: '#00f7ff', score: 50 },
+            ];
+            
+            const typeIndex = Math.min(Math.floor(Math.random() * (1 + wave * 0.3)), types.length - 1);
+            const type = types[typeIndex];
+            
+            const healthMultiplier = 1 + (wave - 1) * 0.2;
+            
+            enemies.push({
+                x: player.x + Math.cos(angle) * distance,
+                y: player.y + Math.sin(angle) * distance,
+                size: type.size,
+                health: type.health * healthMultiplier,
+                maxHealth: type.health * healthMultiplier,
+                speed: type.speed + wave * 0.1,
+                damage: type.damage,
+                color: type.color,
+                score: type.score * wave,
+            });
+            
+            enemiesSpawned++;
+        }
+
+        function spawnResourceNode() {
+            const types = [
+                { type: 'wood', color: '#8b5a2b', size: 35, icon: '🌲' },
+                { type: 'stone', color: '#808080', size: 40, icon: '🪨' },
+                { type: 'metal', color: '#4a90a4', size: 30, icon: '⚙️' },
+            ];
+            
+            const nodeType = types[Math.floor(Math.random() * types.length)];
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 150 + Math.random() * 400;
+            
+            resourceNodes.push({
+                x: player.x + Math.cos(angle) * distance,
+                y: player.y + Math.sin(angle) * distance,
+                ...nodeType,
+                health: 3 + Math.floor(Math.random() * 3),
+            });
+        }
+
+        function nextWave() {
+            wave++;
+            enemiesThisWave = 5 + wave * CONFIG.WAVE_ENEMY_INCREASE;
+            enemiesSpawned = 0;
+            enemiesKilled = 0;
+            
+            // Bonus ammo
+            player.ammo += 20;
+            
+            showNotification(`⚡ WAVE ${wave} INCOMING!`);
+        }
+
+        function updateClonePet() {
+            // Clone follows player at an offset
+            const targetX = player.x - 60;
+            const targetY = player.y + 40;
+            
+            clonePet.x += (targetX - clonePet.x) * 0.1;
+            clonePet.y += (targetY - clonePet.y) * 0.1;
+            
+            // Clone aims at nearest enemy
+            let nearestEnemy = null;
+            let nearestDist = 400;
+            
+            enemies.forEach(enemy => {
+                const dx = enemy.x - clonePet.x;
+                const dy = enemy.y - clonePet.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestEnemy = enemy;
+                }
+            });
+            
+            if (nearestEnemy) {
+                clonePet.angle = Math.atan2(nearestEnemy.y - clonePet.y, nearestEnemy.x - clonePet.x);
+                
+                // Clone shoots
+                const now = Date.now();
+                if (now - clonePet.lastShot > 800) {
+                    clonePet.lastShot = now;
+                    
+                    bullets.push({
+                        x: clonePet.x,
+                        y: clonePet.y,
+                        vx: Math.cos(clonePet.angle) * CONFIG.BULLET_SPEED,
+                        vy: Math.sin(clonePet.angle) * CONFIG.BULLET_SPEED,
+                        damage: calculateDamage(20),
+                        range: 400,
+                        traveled: 0,
+                        piercing: false,
+                        laser: false,
+                        color: '#00f7ff',
+                    });
+                }
+            }
+        }
+
+        function updatePetEffects() {
+            if (!activePet || !activePet.statBonus) return;
+            
+            // Burn effect
+            if (activePet.statBonus.burn) {
+                enemies.forEach(enemy => {
+                    const dx = enemy.x - player.x;
+                    const dy = enemy.y - player.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 150) {
+                        enemy.health -= activePet.statBonus.burn * 0.05;
+                        if (Math.random() < 0.1) {
+                            createParticle(enemy.x, enemy.y, '#ff6a00', 10, 15);
+                        }
+                    }
+                });
+            }
+            
+            // Poison effect
+            if (activePet.statBonus.poison) {
+                enemies.forEach(enemy => {
+                    enemy.health -= activePet.statBonus.poison * 0.02;
+                    if (Math.random() < 0.05) {
+                        createParticle(enemy.x, enemy.y, '#00ff6a', 8, 12);
+                    }
+                });
+            }
+            
+            // Shield regen
+            if (activePet.statBonus.shieldRegen && player.shield < player.maxShield) {
+                player.shield = Math.min(player.maxShield, player.shield + activePet.statBonus.shieldRegen * 0.01);
+            }
+        }
+
+        // ============================================
+        // PICKAXE & CRAFTING
+        // ============================================
+        function usePickaxe() {
+            const range = 100;
+            
+            for (let i = resourceNodes.length - 1; i >= 0; i--) {
+                const node = resourceNodes[i];
+                const dx = node.x - player.x;
+                const dy = node.y - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < range + node.size) {
+                    // Random amount based on type
+                    let amount;
+                    switch (node.type) {
+                        case 'wood': amount = 1 + Math.floor(Math.random() * 3); break;
+                        case 'stone': amount = 1 + Math.floor(Math.random() * 2); break;
+                        case 'metal': amount = 1 + Math.floor(Math.random() * 4); break;
+                    }
+                    
+                    resources[node.type] += amount;
+                    node.health--;
+                    
+                    // Particles
+                    for (let j = 0; j < 5; j++) {
+                        createParticle(node.x, node.y, node.color, 10, 20);
+                    }
+                    
+                    // Floating number
+                    damageNumbers.push({
+                        x: node.x,
+                        y: node.y - 20,
+                        text: `+${amount}`,
+                        life: 40,
+                        color: node.color,
+                    });
+                    
+                    if (node.health <= 0) {
+                        resourceNodes.splice(i, 1);
+                    }
+                    
+                    break;
+                }
+            }
+        }
+
+        function craftAmmo() {
+            if (resources.stone >= 5 && resources.wood >= 2 && resources.metal >= 10) {
+                resources.stone -= 5;
+                resources.wood -= 2;
+                resources.metal -= 10;
+                player.ammo += 100;
+                
+                showNotification('📦 +100 AMMO CRAFTED!');
+                
+                // Particles around player
+                for (let i = 0; i < 20; i++) {
+                    createParticle(player.x, player.y, '#f7ff00', 15, 30);
+                }
+            }
+        }
+
+        function showNotification(text) {
+            const notif = document.getElementById('upgradeNotification');
+            notif.textContent = text;
+            notif.classList.add('show');
+            
+            setTimeout(() => {
+                notif.classList.remove('show');
+            }, 2000);
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function render() {
+            ctx.fillStyle = '#0a0a12';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Background grid
+            renderGrid();
+            
+            // Resource nodes
+            resourceNodes.forEach(node => renderResourceNode(node));
+            
+            // Melee swings
+            meleeSwings.forEach(swing => renderMeleeSwing(swing));
+            
+            // Bullets
+            bullets.forEach(bullet => renderBullet(bullet));
+            
+            // Enemies
+            enemies.forEach(enemy => renderEnemy(enemy));
+            
+            // Player
+            renderPlayer();
+            
+            // Clone pet
+            if (clonePet) {
+                renderClonePet();
+            }
+            
+            // Active pet following player
+            if (activePet) {
+                renderActivePet();
+            }
+            
+            // Particles
+            particles.forEach(particle => renderParticle(particle));
+            
+            // Damage numbers
+            renderDamageNumbers();
+        }
+
+        function renderGrid() {
+            ctx.strokeStyle = 'rgba(157, 0, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            const gridSize = 50;
+            const offsetX = -camera.x % gridSize;
+            const offsetY = -camera.y % gridSize;
+            
+            for (let x = offsetX; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = offsetY; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function renderPlayer() {
+            const screenX = player.x - camera.x;
+            const screenY = player.y - camera.y;
+            const cosmetic = COSMETICS[player.cosmetic];
+            const isInvincible = Date.now() < player.invincible;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(player.angle);
+            
+            // Invincibility effect
+            if (isInvincible) {
+                ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
+            }
+            
+            // Glow effect
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, CONFIG.PLAYER_SIZE * 2);
+            gradient.addColorStop(0, cosmetic.color + '40');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, CONFIG.PLAYER_SIZE * 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Player body
+            ctx.fillStyle = cosmetic.color;
+            ctx.shadowColor = cosmetic.color;
+            ctx.shadowBlur = 20;
+            
+            // Hexagon shape
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI * 2) / 6 - Math.PI / 6;
+                const x = Math.cos(angle) * CONFIG.PLAYER_SIZE;
+                const y = Math.sin(angle) * CONFIG.PLAYER_SIZE;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Inner detail
+            ctx.fillStyle = '#0a0a12';
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI * 2) / 6 - Math.PI / 6;
+                const x = Math.cos(angle) * (CONFIG.PLAYER_SIZE * 0.6);
+                const y = Math.sin(angle) * (CONFIG.PLAYER_SIZE * 0.6);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Weapon indicator
+            ctx.fillStyle = cosmetic.color;
+            ctx.beginPath();
+            ctx.moveTo(CONFIG.PLAYER_SIZE, 0);
+            ctx.lineTo(CONFIG.PLAYER_SIZE + 15, -5);
+            ctx.lineTo(CONFIG.PLAYER_SIZE + 15, 5);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        function renderEnemy(enemy) {
+            const screenX = enemy.x - camera.x;
+            const screenY = enemy.y - camera.y;
+            
+            // Skip if off screen
+            if (screenX < -100 || screenX > canvas.width + 100 ||
+                screenY < -100 || screenY > canvas.height + 100) return;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Glow
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, enemy.size * 1.5);
+            gradient.addColorStop(0, enemy.color + '60');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, enemy.size * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Body
+            ctx.fillStyle = enemy.color;
+            ctx.shadowColor = enemy.color;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(0, 0, enemy.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Inner core
+            ctx.fillStyle = '#0a0a12';
+            ctx.beginPath();
+            ctx.arc(0, 0, enemy.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Health bar
+            const barWidth = enemy.size * 2;
+            const barHeight = 4;
+            const healthPercent = enemy.health / enemy.maxHealth;
+            
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(-barWidth/2, -enemy.size - 15, barWidth, barHeight);
+            
+            ctx.fillStyle = healthPercent > 0.5 ? '#00ff6a' : healthPercent > 0.25 ? '#f7ff00' : '#ff0044';
+            ctx.fillRect(-barWidth/2, -enemy.size - 15, barWidth * healthPercent, barHeight);
+            
+            ctx.restore();
+        }
+
+        function renderBullet(bullet) {
+            const screenX = bullet.x - camera.x;
+            const screenY = bullet.y - camera.y;
+            
+            ctx.save();
+            
+            if (bullet.laser) {
+                // Laser beam effect
+                ctx.strokeStyle = bullet.color;
+                ctx.lineWidth = 4;
+                ctx.shadowColor = bullet.color;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.moveTo(screenX - bullet.vx * 5, screenY - bullet.vy * 5);
+                ctx.lineTo(screenX, screenY);
+                ctx.stroke();
+            } else {
+                // Regular bullet
+                ctx.fillStyle = bullet.color;
+                ctx.shadowColor = bullet.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+
+        function renderResourceNode(node) {
+            const screenX = node.x - camera.x;
+            const screenY = node.y - camera.y;
+            
+            // Skip if off screen
+            if (screenX < -100 || screenX > canvas.width + 100 ||
+                screenY < -100 || screenY > canvas.height + 100) return;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Glow
+            ctx.shadowColor = node.color;
+            ctx.shadowBlur = 15;
+            
+            // Base
+            ctx.fillStyle = node.color;
+            ctx.beginPath();
+            if (node.type === 'wood') {
+                // Triangle for wood
+                ctx.moveTo(0, -node.size);
+                ctx.lineTo(node.size * 0.8, node.size * 0.6);
+                ctx.lineTo(-node.size * 0.8, node.size * 0.6);
+            } else if (node.type === 'stone') {
+                // Pentagon for stone
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
+                    const x = Math.cos(angle) * node.size;
+                    const y = Math.sin(angle) * node.size;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+            } else {
+                // Gear for metal
+                const teeth = 8;
+                for (let i = 0; i < teeth * 2; i++) {
+                    const angle = (i * Math.PI) / teeth;
+                    const r = i % 2 === 0 ? node.size : node.size * 0.7;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Icon
+            ctx.shadowBlur = 0;
+            ctx.font = `${node.size * 0.8}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.icon, 0, 0);
+            
+            ctx.restore();
+        }
+
+        function renderMeleeSwing(swing) {
+            const screenX = swing.x - camera.x;
+            const screenY = swing.y - camera.y;
+            const progress = 1 - (swing.life / swing.maxLife);
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(swing.angle);
+            
+            ctx.strokeStyle = `rgba(0, 247, 255, ${1 - progress})`;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#00f7ff';
+            ctx.shadowBlur = 20;
+            
+            ctx.beginPath();
+            ctx.arc(0, 0, swing.radius * (0.5 + progress * 0.5), -swing.spread, swing.spread);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+
+        function renderParticle(particle) {
+            const screenX = particle.x - camera.x;
+            const screenY = particle.y - camera.y;
+            const alpha = particle.life / particle.maxLife;
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = particle.color;
+            ctx.shadowColor = particle.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function renderClonePet() {
+            const screenX = clonePet.x - camera.x;
+            const screenY = clonePet.y - camera.y;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(clonePet.angle);
+            ctx.globalAlpha = 0.7;
+            
+            // Glow
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 30);
+            gradient.addColorStop(0, '#00f7ff40');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Body
+            ctx.fillStyle = '#00f7ff';
+            ctx.shadowColor = '#00f7ff';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI * 2) / 6 - Math.PI / 6;
+                const x = Math.cos(angle) * 18;
+                const y = Math.sin(angle) * 18;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Inner
+            ctx.fillStyle = '#0a0a12';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Gun
+            ctx.fillStyle = '#00f7ff';
+            ctx.beginPath();
+            ctx.moveTo(18, 0);
+            ctx.lineTo(28, -3);
+            ctx.lineTo(28, 3);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        function renderActivePet() {
+            // Pet floats around player
+            const time = Date.now() * 0.002;
+            const orbitRadius = 50;
+            const petX = player.x + Math.cos(time) * orbitRadius;
+            const petY = player.y + Math.sin(time) * orbitRadius;
+            
+            const screenX = petX - camera.x;
+            const screenY = petY - camera.y;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Glow
+            const color = RARITY_COLORS[activePet.rarity];
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 20;
+            
+            // Pet icon
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(activePet.icon, 0, 0);
+            
+            // Trail particles
+            if (Math.random() < 0.2) {
+                createParticle(petX, petY, color, 5, 15);
+            }
+            
+            ctx.restore();
+        }
+
+        function renderDamageNumbers() {
+            damageNumbers = damageNumbers.filter(dn => {
+                const screenX = dn.x - camera.x;
+                const screenY = dn.y - camera.y - (40 - dn.life);
+                const alpha = dn.life / 60;
+                
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.font = 'bold 18px Orbitron';
+                ctx.fillStyle = dn.color;
+                ctx.textAlign = 'center';
+                ctx.shadowColor = dn.color;
+                ctx.shadowBlur = 10;
+                ctx.fillText(dn.text, screenX, screenY);
+                ctx.restore();
+                
+                dn.life--;
+                return dn.life > 0;
+            });
+        }
+
+        // ============================================
+        // UI UPDATES
+        // ============================================
+        function updateUI() {
+            // Health
+            const healthPercent = (player.health / player.maxHealth) * 100;
+            document.querySelector('#healthBar .stat-bar-fill').style.width = healthPercent + '%';
+            document.querySelector('#healthBar .stat-text').textContent = 
+                `${Math.floor(player.health)}/${player.maxHealth}`;
+            
+            // Shield
+            const shieldPercent = (player.shield / player.maxShield) * 100;
+            document.querySelector('#shieldBar .stat-bar-fill').style.width = shieldPercent + '%';
+            document.querySelector('#shieldBar .stat-text').textContent = 
+                `${Math.floor(player.shield)}/${player.maxShield}`;
+            
+            // XP
+            const xpPercent = (player.xp / CONFIG.XP_PER_LEVEL) * 100;
+            document.querySelector('#xpBar .stat-bar-fill').style.width = xpPercent + '%';
+            document.querySelector('#xpBar .stat-text').textContent = `LVL ${player.level}`;
+            
+            // Resources
+            document.getElementById('woodCount').textContent = resources.wood;
+            document.getElementById('stoneCount').textContent = resources.stone;
+            document.getElementById('metalCount').textContent = resources.metal;
+            
+            // Ammo
+            document.getElementById('totalAmmo').textContent = player.ammo;
+            
+            // Score
+            document.getElementById('scoreDisplay').textContent = player.score;
+            document.getElementById('killCount').textContent = player.kills;
+            
+            // Wave
+            document.getElementById('waveNumber').textContent = wave;
+            document.getElementById('enemyCount').textContent = `${enemiesKilled}/${enemiesThisWave}`;
+            
+            // Craft button
+            const craftBtn = document.getElementById('craftAmmoBtn');
+            craftBtn.disabled = !(resources.stone >= 5 && resources.wood >= 2 && resources.metal >= 10);
+        }
+
+        // ============================================
+        // SHOP & PET SYSTEM
+        // ============================================
+        function loadPlayerData() {
+            const saved = localStorage.getItem('neonSurvivorData');
+            if (saved) {
+                playerData = JSON.parse(saved);
+            } else {
+                // New player bonus
+                playerData.coins = 200;
+            }
+        }
+
+        function savePlayerData() {
+            localStorage.setItem('neonSurvivorData', JSON.stringify(playerData));
+        }
+
+        function showShop() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('shopScreen').style.display = 'flex';
+            updateShopUI();
+        }
+
+        function updateShopUI() {
+            document.getElementById('shopCoins').textContent = playerData.coins;
+            
+            // Update chests
+            const chestsGrid = document.getElementById('chestsGrid');
+            chestsGrid.innerHTML = CHESTS.map(chest => `
+                <div class="chest-item ${playerData.coins < chest.cost ? 'disabled' : ''}" 
+                     onclick="buyChest(${chest.id})"
+                     style="border-color: ${chest.color}40;">
+                    <div class="chest-icon" style="border: 2px solid ${chest.color}; box-shadow: 0 0 15px ${chest.color}40;">📦</div>
+                    <div class="chest-info">
+                        <div class="chest-name" style="color: ${chest.color}">${chest.name}</div>
+                        <div class="chest-odds">Epic: ${chest.rarityWeights.epic}% | Leg: ${chest.rarityWeights.legendary}% | Myth: ${chest.rarityWeights.mythic}%</div>
+                    </div>
+                    <div class="chest-cost">💰 ${chest.cost}</div>
+                </div>
+            `).join('');
+            
+            // Update pets grid
+            const petsGrid = document.getElementById('petsGrid');
+            const maxSlots = 18;
+            let slotsHtml = '';
+            
+            for (let i = 0; i < maxSlots; i++) {
+                if (i < playerData.ownedPets.length) {
+                    const petId = playerData.ownedPets[i];
+                    const pet = PETS[petId];
+                    const isSelected = playerData.equippedPet === petId;
+                    slotsHtml += `
+                        <div class="pet-slot ${isSelected ? 'selected' : ''}" 
+                             onclick="equipPet(${petId})"
+                             style="border-color: ${RARITY_COLORS[pet.rarity]}; ${isSelected ? 'color: ' + RARITY_COLORS[pet.rarity] : ''}">
+                            <span class="pet-icon-large">${pet.icon}</span>
+                            <div class="pet-rarity-dot" style="background: ${RARITY_COLORS[pet.rarity]}"></div>
+                        </div>
+                    `;
+                } else {
+                    slotsHtml += `<div class="pet-slot empty">?</div>`;
+                }
+            }
+            petsGrid.innerHTML = slotsHtml;
+            
+            // Update equipped pet display
+            const equippedInfo = document.getElementById('equippedInfo');
+            if (playerData.equippedPet !== null) {
+                const pet = PETS[playerData.equippedPet];
+                equippedInfo.innerHTML = `
+                    <span class="equipped-icon">${pet.icon}</span>
+                    <div class="equipped-details">
+                        <div class="equipped-name" style="color: ${RARITY_COLORS[pet.rarity]}">${pet.name}</div>
+                        <div class="equipped-effect">${pet.description}</div>
+                    </div>
+                `;
+            } else {
+                equippedInfo.innerHTML = `<span style="color: rgba(255,255,255,0.4)">Click a pet to equip</span>`;
+            }
+        }
+
+        function buyChest(chestId) {
+            const chest = CHESTS[chestId];
+            if (playerData.coins < chest.cost) return;
+            
+            playerData.coins -= chest.cost;
+            
+            // Roll for rarity
+            const roll = Math.random() * 100;
+            let rarity;
+            let cumulative = 0;
+            
+            for (const [r, weight] of Object.entries(chest.rarityWeights)) {
+                cumulative += weight;
+                if (roll < cumulative) {
+                    rarity = r;
+                    break;
+                }
+            }
+            
+            // Get pets of this rarity
+            const petsOfRarity = PETS.filter(p => p.rarity === rarity);
+            const pet = petsOfRarity[Math.floor(Math.random() * petsOfRarity.length)];
+            
+            // Add to owned pets (allow duplicates for now)
+            playerData.ownedPets.push(pet.id);
+            
+            savePlayerData();
+            updateShopUI();
+            showChestReveal(pet);
+        }
+
+        function showChestReveal(pet) {
+            const modal = document.getElementById('chestOpenModal');
+            document.getElementById('revealIcon').textContent = pet.icon;
+            document.getElementById('revealName').textContent = pet.name;
+            document.getElementById('revealName').style.color = RARITY_COLORS[pet.rarity];
+            document.getElementById('revealRarity').textContent = pet.rarity.toUpperCase();
+            document.getElementById('revealRarity').style.color = RARITY_COLORS[pet.rarity];
+            document.getElementById('revealEffect').textContent = pet.description;
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeChestModal() {
+            document.getElementById('chestOpenModal').style.display = 'none';
+        }
+
+        function equipPet(petId) {
+            if (!playerData.ownedPets.includes(petId)) return;
+            
+            if (playerData.equippedPet === petId) {
+                playerData.equippedPet = null;
+            } else {
+                playerData.equippedPet = petId;
+            }
+            
+            savePlayerData();
+            updateShopUI();
+        }
+
+        function startGameFromShop() {
+            document.getElementById('shopScreen').style.display = 'none';
+            
+            // Set active pet
+            if (playerData.equippedPet !== null) {
+                activePet = PETS[playerData.equippedPet];
+                document.getElementById('activePetDisplay').style.display = 'flex';
+                document.getElementById('gamePetIcon').textContent = activePet.icon;
+                document.getElementById('gamePetName').textContent = activePet.name;
+                document.getElementById('gamePetName').style.color = RARITY_COLORS[activePet.rarity];
+                document.getElementById('gamePetEffect').textContent = activePet.description;
+            } else {
+                activePet = null;
+                document.getElementById('activePetDisplay').style.display = 'none';
+            }
+            
+            resetGame();
+            gameRunning = true;
+            gameLoop();
+        }
+
+        function addCoins(amount) {
+            playerData.coins += amount;
+            savePlayerData();
+        }
+
+        // ============================================
+        // PET EFFECTS
+        // ============================================
+        function getPetSpeedBonus() {
+            if (!activePet || !activePet.statBonus) return 0;
+            return activePet.statBonus.speed || 0;
+        }
+
+        function getPetDamageBonus() {
+            if (!activePet || !activePet.statBonus) return 0;
+            let bonus = activePet.statBonus.damage || 0;
+            if (activePet.statBonus.allStats) bonus += activePet.statBonus.allStats;
+            return bonus;
+        }
+
+        function getPetXPBonus() {
+            if (!activePet || !activePet.statBonus) return 0;
+            let bonus = activePet.statBonus.xp || 0;
+            if (activePet.statBonus.allStats) bonus += activePet.statBonus.allStats;
+            return bonus;
+        }
+
+        function hasPetRevive() {
+            if (!activePet || !activePet.statBonus) return 0;
+            return activePet.statBonus.revive || 0;
+        }
+
+        function hasPetClone() {
+            if (!activePet || !activePet.statBonus) return false;
+            return activePet.statBonus.clone || false;
+        }
+
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
