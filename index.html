@@ -393,6 +393,20 @@
             z-index: 10;
         }
         
+        #vignetteOverlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, 
+                transparent 0%, 
+                transparent 40%,
+                rgba(0,0,0,0.3) 70%,
+                rgba(0,0,0,0.7) 90%,
+                rgba(0,0,0,0.95) 100%);
+            z-index: 5;
+        }
+        
         /* Touch Controls */
         #touchControls {
             position: absolute;
@@ -594,6 +608,7 @@
     </div>
     
     <div id="notification">🎯 NEW WEAPON!</div>
+    <div id="vignetteOverlay"></div>
     <div id="damageOverlay"></div>
     
     <!-- Touch Controls -->
@@ -1389,6 +1404,10 @@
     }
     
     function castRayWall(startX, startY, angle) {
+        return castRayWallDetailed(startX, startY, angle).dist;
+    }
+    
+    function castRayWallDetailed(startX, startY, angle) {
         const rayDirX = Math.cos(angle);
         const rayDirY = Math.sin(angle);
         
@@ -1441,27 +1460,58 @@
             }
         }
         
-        return dist * TILE_SIZE;
+        // Calculate exact hit position on wall (0-1)
+        let hitPos;
+        const hitX = startX + rayDirX * dist * TILE_SIZE;
+        const hitY = startY + rayDirY * dist * TILE_SIZE;
+        
+        if (side === 0) {
+            hitPos = (hitY / TILE_SIZE) % 1;
+        } else {
+            hitPos = (hitX / TILE_SIZE) % 1;
+        }
+        if (hitPos < 0) hitPos += 1;
+        
+        return { 
+            dist: dist * TILE_SIZE, 
+            side, 
+            hitPos,
+            mapX, 
+            mapY 
+        };
     }
     
     // ============================================
     // RENDERING
     // ============================================
     function render() {
-        // Pure black sky
-        ctx.fillStyle = '#000000';
+        // Floor with depth gradient (darker in distance, lighter near player)
+        const floorGrad = ctx.createLinearGradient(0, canvas.height / 2, 0, canvas.height);
+        floorGrad.addColorStop(0, '#050101'); // Dark at horizon (far)
+        floorGrad.addColorStop(0.3, '#0a0202');
+        floorGrad.addColorStop(0.6, '#120404');
+        floorGrad.addColorStop(1, '#1a0606'); // Lighter near player (close)
+        ctx.fillStyle = floorGrad;
+        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+        
+        // Ceiling with depth gradient (pure black with slight light near horizon)
+        const ceilGrad = ctx.createLinearGradient(0, 0, 0, canvas.height / 2);
+        ceilGrad.addColorStop(0, '#000000'); // Pure black at top
+        ceilGrad.addColorStop(0.8, '#000000');
+        ceilGrad.addColorStop(1, '#0a0202'); // Slightly lit near walls
+        ctx.fillStyle = ceilGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
         
-        // Blood red sun
+        // Blood red sun (visible through the darkness)
         const sunX = canvas.width * 0.75;
-        const sunY = canvas.height * 0.15;
-        const sunRadius = 60;
+        const sunY = canvas.height * 0.12;
+        const sunRadius = 50;
         
         // Sun glow
-        const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius * 3);
-        sunGlow.addColorStop(0, 'rgba(180, 0, 0, 0.8)');
-        sunGlow.addColorStop(0.3, 'rgba(120, 0, 0, 0.4)');
-        sunGlow.addColorStop(0.6, 'rgba(80, 0, 0, 0.1)');
+        const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius * 4);
+        sunGlow.addColorStop(0, 'rgba(180, 0, 0, 0.6)');
+        sunGlow.addColorStop(0.2, 'rgba(120, 0, 0, 0.3)');
+        sunGlow.addColorStop(0.5, 'rgba(60, 0, 0, 0.1)');
         sunGlow.addColorStop(1, 'transparent');
         ctx.fillStyle = sunGlow;
         ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
@@ -1469,19 +1519,12 @@
         // Sun core
         const sunCore = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius);
         sunCore.addColorStop(0, '#ff2200');
-        sunCore.addColorStop(0.5, '#cc0000');
-        sunCore.addColorStop(1, '#880000');
+        sunCore.addColorStop(0.4, '#cc0000');
+        sunCore.addColorStop(1, '#660000');
         ctx.fillStyle = sunCore;
         ctx.beginPath();
         ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Floor gradient (dark bloody)
-        const floorGrad = ctx.createLinearGradient(0, canvas.height / 2, 0, canvas.height);
-        floorGrad.addColorStop(0, '#1a0505');
-        floorGrad.addColorStop(1, '#050101');
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
         
         // Reset z-buffer
         zBuffer.fill(Infinity);
@@ -1492,7 +1535,10 @@
         
         for (let i = 0; i < numRays; i++) {
             const rayAngle = player.angle - FOV / 2 + (i / numRays) * FOV;
-            const dist = castRayWall(player.x, player.y, rayAngle);
+            const rayResult = castRayWallDetailed(player.x, player.y, rayAngle);
+            const dist = rayResult.dist;
+            const side = rayResult.side;
+            const hitPos = rayResult.hitPos; // 0-1 position along the wall
             
             // Fix fisheye
             const correctedDist = dist * Math.cos(rayAngle - player.angle);
@@ -1502,19 +1548,41 @@
             const wallHeight = (TILE_SIZE / correctedDist) * (canvas.height * 2.0);
             const wallTop = (canvas.height - wallHeight) / 2 + bob;
             
-            // RED wall color based on distance
-            const shade = Math.max(0, 1 - correctedDist / (RENDER_DIST * TILE_SIZE));
-            const r = Math.floor(180 * shade + 30);
-            const g = Math.floor(15 * shade + 3);
-            const b = Math.floor(15 * shade + 3);
+            // Distance-based shading (fog effect)
+            const distShade = Math.max(0, 1 - correctedDist / (RENDER_DIST * TILE_SIZE));
+            
+            // Side shading - one side darker for 3D depth
+            const sideShade = side === 0 ? 1.0 : 0.6;
+            
+            // Edge darkening (ambient occlusion simulation)
+            const edgeDist = Math.min(hitPos, 1 - hitPos); // 0 at edges, 0.5 at center
+            const edgeShade = 0.5 + edgeDist; // 0.5 at edges, 1.0 at center
+            
+            // Combined shade
+            const finalShade = distShade * sideShade * edgeShade;
+            
+            // RED wall color with 3D shading
+            const r = Math.floor(200 * finalShade + 15);
+            const g = Math.floor(20 * finalShade + 2);
+            const b = Math.floor(20 * finalShade + 2);
             
             ctx.fillStyle = `rgb(${r},${g},${b})`;
             ctx.fillRect(i, wallTop, 1, wallHeight);
             
-            // Wall edge glow (red)
-            ctx.fillStyle = `rgba(255, 30, 30, ${shade * 0.3})`;
-            ctx.fillRect(i, wallTop, 1, 5);
-            ctx.fillRect(i, wallTop + wallHeight - 5, 1, 5);
+            // Top edge highlight (light from above)
+            const highlightStrength = distShade * 0.4;
+            ctx.fillStyle = `rgba(255, 100, 80, ${highlightStrength})`;
+            ctx.fillRect(i, wallTop, 1, 3);
+            
+            // Bottom edge shadow (darker at floor)
+            ctx.fillStyle = `rgba(0, 0, 0, ${distShade * 0.5})`;
+            ctx.fillRect(i, wallTop + wallHeight - 8, 1, 8);
+            
+            // Vertical edge lines (corner darkness)
+            if (edgeDist < 0.1) {
+                ctx.fillStyle = `rgba(0, 0, 0, ${(0.1 - edgeDist) * 5 * distShade})`;
+                ctx.fillRect(i, wallTop, 1, wallHeight);
+            }
         }
         
         // Render enemies (sprite-based with occlusion)
