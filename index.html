@@ -1417,26 +1417,7 @@
             lastMouseX = e.clientX;
         });
         
-        // Continuous edge turning - if mouse is at screen edge, keep turning
-        setInterval(() => {
-            if (!gameRunning || document.pointerLockElement) return;
-            
-            const mouseX = lastMouseX;
-            if (mouseX === null) return;
-            
-            const screenWidth = window.innerWidth;
-            const edgeZone = 30;
-            const edgeTurnSpeed = 0.03;
-            
-            // If mouse is at left edge, turn left
-            if (mouseX < edgeZone) {
-                player.angle -= edgeTurnSpeed * (1 - mouseX / edgeZone);
-            }
-            // If mouse is at right edge, turn right
-            else if (mouseX > screenWidth - edgeZone) {
-                player.angle += edgeTurnSpeed * (1 - (screenWidth - mouseX) / edgeZone);
-            }
-        }, 16);
+        // Edge turning removed - use double-click for pointer lock or Q/E keys
         
         // Mouse wheel to switch weapons
         canvas.addEventListener('wheel', e => {
