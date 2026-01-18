@@ -526,8 +526,8 @@
         </div>
         
         <div class="controls-info">
-            <p>🖱️ <span>MOVE TRACKPAD/MOUSE</span> to look around</p>
-            <p>🖱️ <span>CLICK</span> to shoot | <span>SCROLL</span> weapons</p>
+            <p>🖱️ <span>MOVE MOUSE</span> to look | <span>DOUBLE-CLICK</span> for infinite turn</p>
+            <p>🖱️ <span>CLICK</span> to shoot | <span>EDGE OF SCREEN</span> = auto-turn</p>
             <p>📱 Touch joysticks for mobile/tablet</p>
         </div>
     </div>
@@ -1205,8 +1205,9 @@
         });
         document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         
-        // Mouse/Trackpad input - MOVE to look, CLICK to shoot
+        // Mouse/Trackpad input - INFINITE TURNING
         let lastMouseX = null;
+        let totalMouseDelta = 0;
         
         // Click to shoot
         canvas.addEventListener('click', e => {
@@ -1220,9 +1221,30 @@
             e.preventDefault();
         });
         
-        // Mouse/trackpad movement = look around (no clicking needed)
+        // Request pointer lock for infinite turning
+        canvas.addEventListener('dblclick', () => {
+            if (gameRunning && !document.pointerLockElement) {
+                canvas.requestPointerLock();
+            }
+        });
+        
+        document.addEventListener('pointerlockchange', () => {
+            // Pointer lock gives us infinite turning
+        });
+        
+        // Mouse/trackpad movement = look around
         document.addEventListener('mousemove', e => {
             if (!gameRunning) return;
+            
+            // If pointer is locked, use movementX for infinite turning
+            if (document.pointerLockElement === canvas) {
+                player.angle += e.movementX * 0.003;
+                return;
+            }
+            
+            // For non-locked mode: wrap mouse position for infinite turning
+            const screenWidth = window.innerWidth;
+            const edgeThreshold = 50;
             
             // Initialize lastMouseX on first move
             if (lastMouseX === null) {
@@ -1230,13 +1252,30 @@
                 return;
             }
             
-            // Calculate delta and turn
-            const deltaX = e.clientX - lastMouseX;
-            player.angle += deltaX * 0.003;
+            // Calculate delta
+            let deltaX = e.clientX - lastMouseX;
+            
+            // Detect edge wrapping (mouse teleported from one side to other)
+            if (Math.abs(deltaX) > screenWidth * 0.5) {
+                // Mouse wrapped around, adjust delta
+                if (deltaX > 0) {
+                    deltaX = deltaX - screenWidth;
+                } else {
+                    deltaX = deltaX + screenWidth;
+                }
+            }
+            
+            // Apply turning with acceleration for faster swipes
+            const turnSpeed = 0.004;
+            player.angle += deltaX * turnSpeed;
+            
             lastMouseX = e.clientX;
+            
+            // Track total movement for continuous turning even at edges
+            totalMouseDelta += Math.abs(deltaX);
         });
         
-        // Reset lastMouseX when mouse leaves/enters to prevent jumps
+        // When mouse stops at edge, allow keyboard turning to take over smoothly
         document.addEventListener('mouseleave', () => {
             lastMouseX = null;
         });
@@ -1244,6 +1283,27 @@
         canvas.addEventListener('mouseenter', e => {
             lastMouseX = e.clientX;
         });
+        
+        // Continuous edge turning - if mouse is at screen edge, keep turning
+        setInterval(() => {
+            if (!gameRunning || document.pointerLockElement) return;
+            
+            const mouseX = lastMouseX;
+            if (mouseX === null) return;
+            
+            const screenWidth = window.innerWidth;
+            const edgeZone = 30;
+            const edgeTurnSpeed = 0.03;
+            
+            // If mouse is at left edge, turn left
+            if (mouseX < edgeZone) {
+                player.angle -= edgeTurnSpeed * (1 - mouseX / edgeZone);
+            }
+            // If mouse is at right edge, turn right
+            else if (mouseX > screenWidth - edgeZone) {
+                player.angle += edgeTurnSpeed * (1 - (screenWidth - mouseX) / edgeZone);
+            }
+        }, 16);
         
         // Mouse wheel to switch weapons
         canvas.addEventListener('wheel', e => {
