@@ -629,9 +629,11 @@
     // GAME CONFIGURATION
     // ============================================
     const TILE_SIZE = 64;
-    const MAP_SIZE = 24;
+    let MAP_SIZE = 32; // Starting size, will grow
     const FOV = Math.PI / 3;
     const RENDER_DIST = 20;
+    let mapOffsetX = 0; // For infinite maze
+    let mapOffsetY = 0;
     
     const WEAPONS = [
         { id: 0, name: 'Revolver', icon: '🔫', damage: 25, fireRate: 400, ammo: 1, range: 15, unlocked: true },
@@ -694,134 +696,229 @@
     function playAmbientMusic() {
         if (!audioCtx) return;
         
-        // Create spooky drone
-        const osc1 = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const osc3 = audioCtx.createOscillator();
-        const lfo = audioCtx.createOscillator();
-        const lfoGain = audioCtx.createGain();
-        const filter = audioCtx.createBiquadFilter();
-        const gain = audioCtx.createGain();
+        // Create realistic horror ambience with multiple layers
         
-        // Deep bass drone
-        osc1.type = 'sawtooth';
-        osc1.frequency.value = 55; // Low A
+        // Layer 1: Deep rumbling bass
+        const bass = audioCtx.createOscillator();
+        const bassGain = audioCtx.createGain();
+        const bassFilter = audioCtx.createBiquadFilter();
+        bass.type = 'sine';
+        bass.frequency.value = 30;
+        bassFilter.type = 'lowpass';
+        bassFilter.frequency.value = 80;
+        bassGain.gain.value = 0.15;
+        bass.connect(bassFilter);
+        bassFilter.connect(bassGain);
+        bassGain.connect(musicGain);
+        bass.start();
         
-        // Eerie mid tone
-        osc2.type = 'sine';
-        osc2.frequency.value = 110;
+        // Layer 2: Eerie wind noise
+        const windBufferSize = audioCtx.sampleRate * 4;
+        const windBuffer = audioCtx.createBuffer(1, windBufferSize, audioCtx.sampleRate);
+        const windData = windBuffer.getChannelData(0);
+        for (let i = 0; i < windBufferSize; i++) {
+            windData[i] = (Math.random() * 2 - 1) * 0.3;
+        }
+        const wind = audioCtx.createBufferSource();
+        wind.buffer = windBuffer;
+        wind.loop = true;
+        const windFilter = audioCtx.createBiquadFilter();
+        windFilter.type = 'bandpass';
+        windFilter.frequency.value = 300;
+        windFilter.Q.value = 1;
+        const windGain = audioCtx.createGain();
+        windGain.gain.value = 0.04;
+        // LFO for wind modulation
+        const windLfo = audioCtx.createOscillator();
+        const windLfoGain = audioCtx.createGain();
+        windLfo.frequency.value = 0.15;
+        windLfoGain.gain.value = 200;
+        windLfo.connect(windLfoGain);
+        windLfoGain.connect(windFilter.frequency);
+        wind.connect(windFilter);
+        windFilter.connect(windGain);
+        windGain.connect(musicGain);
+        wind.start();
+        windLfo.start();
         
-        // High creepy tone
-        osc3.type = 'triangle';
-        osc3.frequency.value = 220;
-        
-        // LFO for wobble
-        lfo.type = 'sine';
-        lfo.frequency.value = 0.1;
-        lfoGain.gain.value = 20;
-        
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc1.frequency);
-        lfoGain.connect(filter.frequency);
-        
-        filter.type = 'lowpass';
-        filter.frequency.value = 400;
-        filter.Q.value = 5;
-        
-        gain.gain.value = 0.08;
-        
-        osc1.connect(filter);
-        osc2.connect(filter);
-        osc3.connect(gain);
-        filter.connect(gain);
-        gain.connect(musicGain);
-        
-        osc1.start();
-        osc2.start();
-        osc3.start();
-        lfo.start();
+        // Layer 3: Distant heartbeat
+        setInterval(() => {
+            if (!gameRunning) return;
+            const beat1 = audioCtx.createOscillator();
+            const beat1Gain = audioCtx.createGain();
+            beat1.type = 'sine';
+            beat1.frequency.value = 40;
+            beat1Gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            beat1Gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            beat1.connect(beat1Gain);
+            beat1Gain.connect(musicGain);
+            beat1.start();
+            beat1.stop(audioCtx.currentTime + 0.15);
+            
+            setTimeout(() => {
+                const beat2 = audioCtx.createOscillator();
+                const beat2Gain = audioCtx.createGain();
+                beat2.type = 'sine';
+                beat2.frequency.value = 35;
+                beat2Gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+                beat2Gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                beat2.connect(beat2Gain);
+                beat2Gain.connect(musicGain);
+                beat2.start();
+                beat2.stop(audioCtx.currentTime + 0.1);
+            }, 150);
+        }, 1200);
     }
     
     function playHorrorSound() {
         if (!audioCtx) return;
         
-        const type = Math.floor(Math.random() * 4);
+        const type = Math.floor(Math.random() * 6);
         
         if (type === 0) {
-            // Cave drip / distant scream
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 1.5);
-            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 1.5);
+            // Realistic footsteps in distance
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => {
+                    const bufferSize = audioCtx.sampleRate * 0.1;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let j = 0; j < bufferSize; j++) {
+                        data[j] = (Math.random() * 2 - 1) * Math.exp(-j / 1000);
+                    }
+                    const step = audioCtx.createBufferSource();
+                    step.buffer = buffer;
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 500;
+                    const gain = audioCtx.createGain();
+                    gain.gain.value = 0.08;
+                    step.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    step.start();
+                }, i * 400 + Math.random() * 100);
+            }
         } else if (type === 1) {
-            // Deep rumble
+            // Creaking door / wood
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sawtooth';
-            osc.frequency.value = 40 + Math.random() * 20;
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(120, audioCtx.currentTime + 0.5);
+            osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 1.5);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.5);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
             osc.stop(audioCtx.currentTime + 2);
         } else if (type === 2) {
-            // Whisper / wind
+            // Distant thunder / rumble
+            const bufferSize = audioCtx.sampleRate * 3;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / 30000);
+            }
+            const thunder = audioCtx.createBufferSource();
+            thunder.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 150;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
+            thunder.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            thunder.start();
+        } else if (type === 3) {
+            // Whispers
             const bufferSize = audioCtx.sampleRate * 2;
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * 0.1;
+                const mod = Math.sin(i * 0.01) * Math.sin(i * 0.003);
+                data[i] = (Math.random() * 2 - 1) * 0.15 * mod;
             }
-            const noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
+            const whisper = audioCtx.createBufferSource();
+            whisper.buffer = buffer;
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'bandpass';
-            filter.frequency.value = 1000;
-            filter.Q.value = 10;
+            filter.frequency.value = 2000;
+            filter.Q.value = 5;
             const gain = audioCtx.createGain();
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.5);
+            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.3);
             gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
-            noise.connect(filter);
+            whisper.connect(filter);
             filter.connect(gain);
             gain.connect(audioCtx.destination);
-            noise.start();
-        } else {
-            // Metallic clang
-            const osc = audioCtx.createOscillator();
+            whisper.start();
+        } else if (type === 4) {
+            // Metal scraping
+            const bufferSize = audioCtx.sampleRate * 1.5;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.sin(i * 0.1 + Math.sin(i * 0.01) * 50) * 0.3 * Math.exp(-i / 20000);
+            }
+            const scrape = audioCtx.createBufferSource();
+            scrape.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 1000;
             const gain = audioCtx.createGain();
-            osc.type = 'square';
-            osc.frequency.value = 150 + Math.random() * 100;
-            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-            osc.connect(gain);
+            gain.gain.value = 0.1;
+            scrape.connect(filter);
+            filter.connect(gain);
             gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.5);
+            scrape.start();
+        } else {
+            // Child's music box (creepy)
+            const notes = [392, 440, 494, 523, 494, 440];
+            notes.forEach((freq, i) => {
+                setTimeout(() => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.5);
+                }, i * 300);
+            });
         }
     }
     
     function playShootSound() {
         if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
+        // Realistic gunshot
+        const bufferSize = audioCtx.sampleRate * 0.3;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            // Initial crack
+            const crack = i < 500 ? (Math.random() * 2 - 1) * Math.exp(-i / 100) : 0;
+            // Decay rumble
+            const rumble = (Math.random() * 2 - 1) * 0.3 * Math.exp(-i / 3000);
+            data[i] = crack + rumble;
+        }
+        const shot = audioCtx.createBufferSource();
+        shot.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 3000;
         const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-        osc.connect(gain);
+        gain.gain.value = 0.4;
+        shot.connect(filter);
+        filter.connect(gain);
         gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.1);
+        shot.start();
     }
     
     // ============================================
@@ -926,6 +1023,117 @@
         for (let sy = 1; sy <= 3; sy++) {
             for (let sx = 1; sx <= 3; sx++) {
                 map[sy][sx] = 0;
+            }
+        }
+    }
+    
+    function expandMaze(playerX, playerY) {
+        const oldSize = MAP_SIZE;
+        const expandAmount = 16;
+        
+        // Determine which direction to expand
+        let shiftX = 0, shiftY = 0;
+        
+        if (playerX > MAP_SIZE - 8) {
+            // Expand right
+            MAP_SIZE += expandAmount;
+            for (let y = 0; y < oldSize; y++) {
+                for (let x = oldSize; x < MAP_SIZE; x++) {
+                    if (!map[y]) map[y] = [];
+                    map[y][x] = 1; // Wall by default
+                }
+            }
+        }
+        if (playerY > MAP_SIZE - 8) {
+            // Expand down
+            MAP_SIZE = Math.max(MAP_SIZE, oldSize + expandAmount);
+            for (let y = oldSize; y < MAP_SIZE; y++) {
+                map[y] = [];
+                for (let x = 0; x < MAP_SIZE; x++) {
+                    map[y][x] = 1;
+                }
+            }
+        }
+        if (playerX < 5) {
+            // Expand left - shift everything right
+            shiftX = expandAmount;
+            MAP_SIZE += expandAmount;
+            const newMap = [];
+            for (let y = 0; y < MAP_SIZE; y++) {
+                newMap[y] = [];
+                for (let x = 0; x < MAP_SIZE; x++) {
+                    if (x < expandAmount) {
+                        newMap[y][x] = 1;
+                    } else {
+                        newMap[y][x] = map[y] ? (map[y][x - expandAmount] || 1) : 1;
+                    }
+                }
+            }
+            map = newMap;
+            player.x += expandAmount * TILE_SIZE;
+            petState.x += expandAmount * TILE_SIZE;
+            enemies.forEach(e => e.x += expandAmount * TILE_SIZE);
+            resources.forEach(r => r.x += expandAmount * TILE_SIZE);
+            paintings.forEach(p => { p.x += expandAmount * TILE_SIZE; p.mapX += expandAmount; });
+        }
+        if (playerY < 5) {
+            // Expand up - shift everything down
+            shiftY = expandAmount;
+            MAP_SIZE = Math.max(MAP_SIZE, oldSize + expandAmount);
+            const newMap = [];
+            for (let y = 0; y < MAP_SIZE; y++) {
+                newMap[y] = [];
+                for (let x = 0; x < MAP_SIZE; x++) {
+                    if (y < expandAmount) {
+                        newMap[y][x] = 1;
+                    } else {
+                        newMap[y][x] = map[y - expandAmount] ? (map[y - expandAmount][x] || 1) : 1;
+                    }
+                }
+            }
+            map = newMap;
+            player.y += expandAmount * TILE_SIZE;
+            petState.y += expandAmount * TILE_SIZE;
+            enemies.forEach(e => e.y += expandAmount * TILE_SIZE);
+            resources.forEach(r => r.y += expandAmount * TILE_SIZE);
+            paintings.forEach(p => { p.y += expandAmount * TILE_SIZE; p.mapY += expandAmount; });
+        }
+        
+        // Carve new passages in expanded area using random walk
+        const newPlayerX = Math.floor(player.x / TILE_SIZE);
+        const newPlayerY = Math.floor(player.y / TILE_SIZE);
+        
+        for (let i = 0; i < 50; i++) {
+            let cx = newPlayerX + Math.floor(Math.random() * 20) - 10;
+            let cy = newPlayerY + Math.floor(Math.random() * 20) - 10;
+            
+            for (let j = 0; j < 15; j++) {
+                if (cx > 0 && cx < MAP_SIZE - 1 && cy > 0 && cy < MAP_SIZE - 1) {
+                    map[cy][cx] = 0;
+                    const dir = Math.floor(Math.random() * 4);
+                    if (dir === 0) cx++;
+                    else if (dir === 1) cx--;
+                    else if (dir === 2) cy++;
+                    else cy--;
+                }
+            }
+        }
+        
+        // Add new paintings in expanded area
+        for (let i = 0; i < 5; i++) {
+            const x = Math.floor(Math.random() * MAP_SIZE);
+            const y = Math.floor(Math.random() * MAP_SIZE);
+            if (map[y] && map[y][x] === 1) {
+                const paintingData = FAMOUS_PAINTINGS[Math.floor(Math.random() * FAMOUS_PAINTINGS.length)];
+                paintings.push({
+                    x: x * TILE_SIZE + TILE_SIZE / 2,
+                    y: y * TILE_SIZE + TILE_SIZE / 2,
+                    mapX: x,
+                    mapY: y,
+                    eyeOffset: 0,
+                    blinkTimer: Math.random() * 100,
+                    ...paintingData
+                });
             }
         }
     }
@@ -1454,6 +1662,18 @@
             }
         }
         
+        // ENDLESS MAZE: Expand map as player approaches edges
+        const playerMapX = Math.floor(player.x / TILE_SIZE);
+        const playerMapY = Math.floor(player.y / TILE_SIZE);
+        const expandThreshold = 5;
+        
+        if (playerMapX > MAP_SIZE - expandThreshold || 
+            playerMapY > MAP_SIZE - expandThreshold ||
+            playerMapX < expandThreshold || 
+            playerMapY < expandThreshold) {
+            expandMaze(playerMapX, playerMapY);
+        }
+        
         // Update enemies
         updateEnemies();
         
@@ -1653,13 +1873,24 @@
         }
     }
     
+    // Famous horror paintings data
+    const FAMOUS_PAINTINGS = [
+        { name: 'The Scream', bgColor: '#ff6633', faceColor: '#ffddaa', hasHands: true },
+        { name: 'Mona Lisa', bgColor: '#2a3322', faceColor: '#e8d4b8', hasSmile: true },
+        { name: 'Girl with Pearl', bgColor: '#1a2a3a', faceColor: '#f0d8c0', hasEarring: true },
+        { name: 'The Ring', bgColor: '#111111', faceColor: '#aaaaaa', hasHair: true },
+        { name: 'Weeping Woman', bgColor: '#334455', faceColor: '#ccbbaa', hasTears: true },
+        { name: 'Saturn', bgColor: '#1a1008', faceColor: '#885544', isScary: true },
+    ];
+    
     function initPaintings() {
         paintings = [];
-        // Place creepy paintings on random walls
-        for (let i = 0; i < 15; i++) {
+        // Place famous horror paintings on random walls
+        for (let i = 0; i < 20; i++) {
             const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             const y = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             if (map[y][x] === 1) { // On a wall
+                const paintingData = FAMOUS_PAINTINGS[Math.floor(Math.random() * FAMOUS_PAINTINGS.length)];
                 paintings.push({
                     x: x * TILE_SIZE + TILE_SIZE / 2,
                     y: y * TILE_SIZE + TILE_SIZE / 2,
@@ -1667,7 +1898,7 @@
                     mapY: y,
                     eyeOffset: 0,
                     blinkTimer: Math.random() * 100,
-                    type: Math.floor(Math.random() * 3) // Different painting types
+                    ...paintingData
                 });
             }
         }
@@ -1857,34 +2088,80 @@
             // Check for paintings on this wall segment
             for (const painting of paintings) {
                 if (rayResult.mapX === painting.mapX && rayResult.mapY === painting.mapY) {
-                    // Draw painting on wall
-                    const paintingSize = wallHeight * 0.3;
-                    const paintingY = wallTop + wallHeight * 0.3;
+                    const paintingSize = wallHeight * 0.35;
+                    const paintingY = wallTop + wallHeight * 0.25;
                     
                     // Only draw if this ray is in the middle of the wall
-                    if (hitPos > 0.3 && hitPos < 0.7) {
-                        // Painting frame
-                        ctx.fillStyle = `rgba(60, 40, 20, ${distShade})`;
-                        ctx.fillRect(i, paintingY, 1, paintingSize);
+                    if (hitPos > 0.25 && hitPos < 0.75) {
+                        // Golden frame
+                        ctx.fillStyle = `rgba(180, 140, 60, ${distShade * 0.9})`;
+                        ctx.fillRect(i, paintingY - 3, 1, paintingSize + 6);
                         
-                        // Creepy face that follows player
-                        if (hitPos > 0.4 && hitPos < 0.6) {
-                            painting.eyeOffset = Math.sin(Date.now() * 0.002) * 2;
+                        // Painting background
+                        const bg = painting.bgColor;
+                        ctx.fillStyle = bg;
+                        ctx.globalAlpha = distShade;
+                        ctx.fillRect(i, paintingY, 1, paintingSize);
+                        ctx.globalAlpha = 1;
+                        
+                        // Draw the face/figure
+                        if (hitPos > 0.35 && hitPos < 0.65) {
+                            painting.eyeOffset = Math.sin(Date.now() * 0.002) * 3;
                             painting.blinkTimer--;
                             
-                            const eyeY = paintingY + paintingSize * 0.35;
-                            const mouthY = paintingY + paintingSize * 0.7;
+                            const faceY = paintingY + paintingSize * 0.2;
+                            const faceH = paintingSize * 0.4;
+                            const eyeY = faceY + faceH * 0.3;
+                            const mouthY = faceY + faceH * 0.7;
                             
-                            // Eyes (move slightly)
+                            // Face
+                            ctx.fillStyle = painting.faceColor;
+                            ctx.globalAlpha = distShade * 0.9;
+                            ctx.fillRect(i, faceY, 1, faceH);
+                            
+                            // Eyes that follow (creepy!)
                             if (painting.blinkTimer > 5 || painting.blinkTimer < 0) {
-                                ctx.fillStyle = `rgba(255, 200, 200, ${distShade * 0.8})`;
-                                ctx.fillRect(i, eyeY + painting.eyeOffset, 1, 2);
+                                ctx.fillStyle = '#000000';
+                                ctx.fillRect(i, eyeY + painting.eyeOffset, 1, 3);
+                                // Eye whites
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect(i, eyeY + painting.eyeOffset + 1, 1, 1);
                             }
-                            if (painting.blinkTimer < 0) painting.blinkTimer = 100 + Math.random() * 100;
+                            if (painting.blinkTimer < 0) painting.blinkTimer = 80 + Math.random() * 120;
                             
-                            // Creepy smile
-                            ctx.fillStyle = `rgba(80, 0, 0, ${distShade * 0.6})`;
-                            ctx.fillRect(i, mouthY, 1, 1);
+                            // Special features based on painting type
+                            if (painting.hasHands) {
+                                // The Scream hands on face
+                                ctx.fillStyle = painting.faceColor;
+                                ctx.fillRect(i, faceY - 5, 1, 8);
+                            }
+                            if (painting.hasSmile) {
+                                // Mona Lisa mysterious smile
+                                ctx.fillStyle = '#553333';
+                                ctx.fillRect(i, mouthY, 1, 2);
+                            }
+                            if (painting.hasTears) {
+                                // Tears
+                                ctx.fillStyle = '#6688aa';
+                                ctx.fillRect(i, eyeY + 8, 1, 5);
+                            }
+                            if (painting.hasHair) {
+                                // Long dark hair (The Ring style)
+                                ctx.fillStyle = '#111111';
+                                ctx.fillRect(i, faceY - 10, 1, faceH + 20);
+                            }
+                            if (painting.hasEarring) {
+                                // Pearl earring
+                                ctx.fillStyle = '#eeeeff';
+                                ctx.fillRect(i, faceY + faceH * 0.5, 1, 3);
+                            }
+                            if (painting.isScary) {
+                                // Extra creepy - red tint
+                                ctx.fillStyle = 'rgba(100, 0, 0, 0.4)';
+                                ctx.fillRect(i, paintingY, 1, paintingSize);
+                            }
+                            
+                            ctx.globalAlpha = 1;
                         }
                     }
                 }
@@ -2049,7 +2326,11 @@
         const dy = petState.y - player.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
-        if (dist < 10) return; // Too close
+        if (dist < 15) return; // Too close
+        
+        // Check if behind a wall
+        const wallDist = castRayWall(player.x, player.y, Math.atan2(dy, dx));
+        if (wallDist < dist) return;
         
         const angleToRes = Math.atan2(dy, dx);
         let relAngle = angleToRes - player.angle;
@@ -2059,54 +2340,232 @@
         if (Math.abs(relAngle) > FOV / 2 + 0.5) return;
         
         const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-        const size = (TILE_SIZE * 0.5 / dist) * canvas.height;
-        const screenY = canvas.height / 2 + bob + Math.sin(Date.now() * 0.005) * 5;
+        const size = (TILE_SIZE * 0.6 / dist) * canvas.height;
+        const breathe = Math.sin(Date.now() * 0.003) * size * 0.05;
+        const screenY = canvas.height / 2 + bob + breathe;
         
         ctx.save();
         ctx.translate(screenX, screenY);
         
-        // Draw pet as a creature sprite
         const color = equippedPet.color;
         const glow = equippedPet.glowColor;
+        const darkColor = shadeColor(color, -30);
+        const time = Date.now() * 0.001;
         
+        // Determine pet type based on id for realistic rendering
+        const petType = equippedPet.id;
+        
+        // Shadow on ground
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(0, size * 0.4, size * 0.4, size * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Subtle glow
         ctx.shadowColor = glow;
-        ctx.shadowBlur = 25;
+        ctx.shadowBlur = 15;
         
-        // Body
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, size * 0.5, size * 0.35, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Head
-        ctx.beginPath();
-        ctx.arc(size * 0.3, -size * 0.1, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Eyes (glowing)
-        ctx.shadowBlur = 10;
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(size * 0.35, -size * 0.15, size * 0.08, 0, Math.PI * 2);
-        ctx.arc(size * 0.45, -size * 0.12, size * 0.06, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Legs (animated)
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = color;
-        const legAnim = Math.sin(Date.now() * 0.01) * size * 0.1;
-        ctx.fillRect(-size * 0.3, size * 0.2, size * 0.12, size * 0.3 + legAnim);
-        ctx.fillRect(size * 0.1, size * 0.2, size * 0.12, size * 0.3 - legAnim);
-        
-        // Tail
-        ctx.beginPath();
-        ctx.moveTo(-size * 0.4, 0);
-        ctx.quadraticCurveTo(-size * 0.7, -size * 0.2 + Math.sin(Date.now() * 0.008) * size * 0.2, -size * 0.6, -size * 0.4);
-        ctx.lineWidth = size * 0.1;
-        ctx.strokeStyle = color;
-        ctx.stroke();
+        if (petType === 'dragon' || petType === 'cosmic') {
+            // Dragon body - serpentine
+            ctx.fillStyle = color;
+            // Body segments
+            for (let i = 0; i < 4; i++) {
+                const segX = -i * size * 0.15 + Math.sin(time * 2 + i) * size * 0.05;
+                const segY = Math.sin(time + i * 0.5) * size * 0.03;
+                ctx.beginPath();
+                ctx.ellipse(segX, segY, size * (0.25 - i * 0.03), size * (0.18 - i * 0.02), 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // Head
+            ctx.beginPath();
+            ctx.ellipse(size * 0.2, -size * 0.05, size * 0.2, size * 0.15, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Horns
+            ctx.fillStyle = darkColor;
+            ctx.beginPath();
+            ctx.moveTo(size * 0.15, -size * 0.15);
+            ctx.lineTo(size * 0.1, -size * 0.35);
+            ctx.lineTo(size * 0.2, -size * 0.18);
+            ctx.fill();
+            // Eyes
+            ctx.fillStyle = '#ff4400';
+            ctx.shadowColor = '#ff4400';
+            ctx.beginPath();
+            ctx.arc(size * 0.28, -size * 0.08, size * 0.04, 0, Math.PI * 2);
+            ctx.fill();
+            // Wings
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.7;
+            const wingFlap = Math.sin(time * 8) * 0.3;
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.1);
+            ctx.quadraticCurveTo(-size * 0.4, -size * (0.5 + wingFlap), -size * 0.1, -size * 0.15);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (petType === 'wolf' || petType === 'dog' || petType === 'fox' || petType === 'tiger') {
+            // Quadruped animal
+            const runCycle = Math.sin(time * 6);
+            
+            // Body
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size * 0.35, size * 0.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Legs (animated running)
+            ctx.fillStyle = darkColor;
+            const legPositions = [
+                { x: -size * 0.2, phase: 0 },
+                { x: -size * 0.1, phase: Math.PI },
+                { x: size * 0.1, phase: Math.PI * 0.5 },
+                { x: size * 0.2, phase: Math.PI * 1.5 }
+            ];
+            legPositions.forEach(leg => {
+                const legY = size * 0.15 + Math.abs(Math.sin(time * 6 + leg.phase)) * size * 0.15;
+                ctx.fillRect(leg.x - size * 0.03, size * 0.1, size * 0.06, legY);
+            });
+            
+            // Head
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(size * 0.3, -size * 0.05, size * 0.18, size * 0.15, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ears
+            ctx.beginPath();
+            ctx.moveTo(size * 0.25, -size * 0.15);
+            ctx.lineTo(size * 0.2, -size * 0.3);
+            ctx.lineTo(size * 0.3, -size * 0.18);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(size * 0.35, -size * 0.15);
+            ctx.lineTo(size * 0.4, -size * 0.28);
+            ctx.lineTo(size * 0.4, -size * 0.15);
+            ctx.fill();
+            
+            // Snout
+            ctx.fillStyle = darkColor;
+            ctx.beginPath();
+            ctx.ellipse(size * 0.42, 0, size * 0.08, size * 0.06, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = glow;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(size * 0.35, -size * 0.08, size * 0.03, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tail
+            ctx.strokeStyle = color;
+            ctx.lineWidth = size * 0.08;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.35, 0);
+            ctx.quadraticCurveTo(-size * 0.5, -size * 0.1 + Math.sin(time * 4) * size * 0.15, -size * 0.45, -size * 0.2);
+            ctx.stroke();
+        } else if (petType === 'phoenix') {
+            // Fiery bird
+            ctx.fillStyle = color;
+            // Body
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size * 0.25, size * 0.18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Head
+            ctx.beginPath();
+            ctx.arc(size * 0.25, -size * 0.1, size * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+            // Beak
+            ctx.fillStyle = '#ffaa00';
+            ctx.beginPath();
+            ctx.moveTo(size * 0.35, -size * 0.1);
+            ctx.lineTo(size * 0.5, -size * 0.08);
+            ctx.lineTo(size * 0.35, -size * 0.05);
+            ctx.fill();
+            // Flame wings
+            ctx.fillStyle = '#ff6600';
+            for (let i = 0; i < 3; i++) {
+                const flameX = -size * 0.1 - i * size * 0.12;
+                const flameY = -size * 0.1 + Math.sin(time * 10 + i) * size * 0.1;
+                ctx.beginPath();
+                ctx.moveTo(flameX, 0);
+                ctx.quadraticCurveTo(flameX - size * 0.2, flameY - size * 0.3, flameX, flameY - size * 0.15);
+                ctx.fill();
+            }
+            // Glowing eye
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#ffff00';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(size * 0.3, -size * 0.12, size * 0.03, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Default creature (cat, unicorn, shadow, clone, ancient)
+            ctx.fillStyle = color;
+            // Body
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size * 0.3, size * 0.2 + breathe, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Head
+            ctx.beginPath();
+            ctx.arc(size * 0.25, -size * 0.1, size * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            // Ears
+            ctx.beginPath();
+            ctx.moveTo(size * 0.15, -size * 0.2);
+            ctx.lineTo(size * 0.12, -size * 0.38);
+            ctx.lineTo(size * 0.22, -size * 0.22);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(size * 0.32, -size * 0.2);
+            ctx.lineTo(size * 0.38, -size * 0.36);
+            ctx.lineTo(size * 0.38, -size * 0.18);
+            ctx.fill();
+            // Eyes
+            ctx.fillStyle = glow;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(size * 0.22, -size * 0.12, size * 0.035, 0, Math.PI * 2);
+            ctx.arc(size * 0.32, -size * 0.1, size * 0.03, 0, Math.PI * 2);
+            ctx.fill();
+            // Tail
+            ctx.strokeStyle = color;
+            ctx.lineWidth = size * 0.06;
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.3, 0);
+            ctx.bezierCurveTo(-size * 0.5, -size * 0.1, -size * 0.5 + Math.sin(time * 3) * size * 0.1, -size * 0.3, -size * 0.4, -size * 0.35);
+            ctx.stroke();
+            
+            // Special: Unicorn horn
+            if (petType === 'unicorn') {
+                ctx.fillStyle = '#ffddff';
+                ctx.beginPath();
+                ctx.moveTo(size * 0.25, -size * 0.25);
+                ctx.lineTo(size * 0.28, -size * 0.5);
+                ctx.lineTo(size * 0.31, -size * 0.25);
+                ctx.fill();
+            }
+            // Special: Clone effect
+            if (petType === 'clone') {
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.ellipse(size * 0.05, size * 0.05, size * 0.32, size * 0.22, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
         
         ctx.restore();
+    }
+    
+    function shadeColor(color, percent) {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+        const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
+        const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+        return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
     }
     
     function renderWeapon(bob) {
