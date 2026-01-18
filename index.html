@@ -458,8 +458,8 @@
         <p class="game-subtitle">YEAR 2087</p>
         <button class="start-button" onclick="openPetShop()">ENTER THE MAZE</button>
         <div class="controls-info">
-            <p><span>WASD / Arrows</span> Move | <span>MOUSE/TOUCH</span> Look | <span>CLICK/TAP</span> Shoot</p>
-            <p><span>1-7</span> Weapons | <span>SHIFT</span> Sprint</p>
+            <p><span>WASD</span> Move | <span>Q/E or ←/→</span> Turn | <span>SPACE</span> Shoot</p>
+            <p><span>1-7</span> Weapons | <span>SHIFT</span> Sprint | <span>MOUSE</span> Optional</p>
         </div>
     </div>
     
@@ -710,6 +710,11 @@
                     player.weapon = idx;
                     updateWeaponHud();
                 }
+            }
+            // Spacebar to shoot (no mouse needed)
+            if (e.key === ' ' && gameRunning) {
+                e.preventDefault();
+                shoot();
             }
         });
         document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -994,7 +999,16 @@
         const moveSpeed = (keys['shift'] ? 4 : baseSpeed) * speedMult;
         let dx = 0, dy = 0;
         
-        // Keyboard movement
+        // Keyboard turning (Q/E or Arrow Left/Right)
+        const turnSpeed = 0.05;
+        if (keys['q'] || keys['arrowleft']) {
+            player.angle -= turnSpeed;
+        }
+        if (keys['e'] || keys['arrowright']) {
+            player.angle += turnSpeed;
+        }
+        
+        // Keyboard movement (WASD or Arrow Up/Down)
         if (keys['w'] || keys['arrowup']) {
             dx += Math.cos(player.angle) * moveSpeed;
             dy += Math.sin(player.angle) * moveSpeed;
@@ -1003,11 +1017,12 @@
             dx -= Math.cos(player.angle) * moveSpeed;
             dy -= Math.sin(player.angle) * moveSpeed;
         }
-        if (keys['a'] || keys['arrowleft']) {
+        // A/D for strafing
+        if (keys['a']) {
             dx += Math.cos(player.angle - Math.PI/2) * moveSpeed;
             dy += Math.sin(player.angle - Math.PI/2) * moveSpeed;
         }
-        if (keys['d'] || keys['arrowright']) {
+        if (keys['d']) {
             dx += Math.cos(player.angle + Math.PI/2) * moveSpeed;
             dy += Math.sin(player.angle + Math.PI/2) * moveSpeed;
         }
