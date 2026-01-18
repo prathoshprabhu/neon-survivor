@@ -408,13 +408,12 @@
             position: absolute;
             bottom: 100px;
             left: 30px;
-            width: 120px;
-            height: 120px;
-            background: rgba(255,255,255,0.1);
-            border: 2px solid rgba(0,247,255,0.5);
+            width: 130px;
+            height: 130px;
+            background: rgba(255,255,255,0.15);
+            border: 3px solid rgba(0,247,255,0.6);
             border-radius: 50%;
             pointer-events: auto;
-            display: none;
         }
         
         .touch-joystick-inner {
@@ -422,31 +421,80 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            background: rgba(0,247,255,0.5);
+            width: 55px;
+            height: 55px;
+            background: rgba(0,247,255,0.6);
             border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0,247,255,0.5);
         }
         
         .touch-shoot {
             position: absolute;
             bottom: 120px;
             right: 40px;
-            width: 80px;
-            height: 80px;
-            background: rgba(255,100,50,0.3);
-            border: 2px solid rgba(255,100,50,0.7);
+            width: 90px;
+            height: 90px;
+            background: rgba(255,50,50,0.4);
+            border: 3px solid rgba(255,100,50,0.8);
             border-radius: 50%;
             pointer-events: auto;
-            display: none;
-            font-size: 30px;
+            font-size: 36px;
             color: #fff;
+            display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 0 20px rgba(255,100,50,0.4);
         }
         
-        @media (pointer: coarse) {
-            .touch-joystick, .touch-shoot { display: flex; }
+        .touch-shoot:active {
+            background: rgba(255,100,50,0.7);
+            transform: scale(0.95);
+        }
+        
+        .touch-look {
+            position: absolute;
+            bottom: 100px;
+            right: 150px;
+            width: 130px;
+            height: 130px;
+            background: rgba(255,255,255,0.1);
+            border: 3px solid rgba(157,0,255,0.5);
+            border-radius: 50%;
+            pointer-events: auto;
+        }
+        
+        .touch-look-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 55px;
+            height: 55px;
+            background: rgba(157,0,255,0.5);
+            border-radius: 50%;
+        }
+        
+        .touch-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            font-family: 'Orbitron', monospace;
+            white-space: nowrap;
+        }
+        
+        /* Hide touch controls on devices with fine pointer (mouse) */
+        @media (pointer: fine) and (hover: hover) {
+            #touchControls { display: none; }
+        }
+        
+        /* Show on touch devices */
+        @media (pointer: coarse), (hover: none) {
+            #touchControls { display: block; }
+            #weaponHud { bottom: 250px; transform: translateX(-50%) scale(0.8); }
+            #ammoHud { bottom: 250px; }
         }
     </style>
 </head>
@@ -458,8 +506,9 @@
         <p class="game-subtitle">YEAR 2087</p>
         <button class="start-button" onclick="openPetShop()">ENTER THE MAZE</button>
         <div class="controls-info">
-            <p><span>WASD</span> Move | <span>Q/E or ←/→</span> Turn | <span>SPACE</span> Shoot</p>
-            <p><span>1-7</span> Weapons | <span>SHIFT</span> Sprint | <span>MOUSE</span> Optional</p>
+            <p>🖥️ <span>WASD</span> Move | <span>Q/E</span> Turn | <span>SPACE/CLICK</span> Shoot</p>
+            <p>🖱️ <span>DRAG</span> or <span>DBL-CLICK</span> to look | <span>SCROLL</span> Weapons</p>
+            <p>📱 Touch joysticks for mobile/tablet</p>
         </div>
     </div>
     
@@ -545,8 +594,13 @@
     <div id="touchControls">
         <div class="touch-joystick" id="moveJoystick">
             <div class="touch-joystick-inner" id="joystickInner"></div>
+            <span class="touch-label">MOVE</span>
         </div>
-        <div class="touch-shoot" id="shootBtn">🎯</div>
+        <div class="touch-look" id="lookJoystick">
+            <div class="touch-look-inner" id="lookInner"></div>
+            <span class="touch-label">LOOK</span>
+        </div>
+        <div class="touch-shoot" id="shootBtn">🔫</div>
     </div>
 
     <script>
@@ -719,8 +773,26 @@
         });
         document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         
-        // Mouse input (desktop)
-        canvas.addEventListener('click', () => {
+        // Mouse input (desktop - works with mouse, trackpad, etc.)
+        let mouseDown = false;
+        let lastMouseX = 0;
+        
+        // Click to shoot (works even without pointer lock)
+        canvas.addEventListener('click', e => {
+            if (gameRunning) {
+                shoot();
+            }
+        });
+        
+        // Right-click or double-click to enable pointer lock (optional for mouse users)
+        canvas.addEventListener('dblclick', () => {
+            if (!mouse.locked && gameRunning) {
+                canvas.requestPointerLock();
+            }
+        });
+        
+        canvas.addEventListener('contextmenu', e => {
+            e.preventDefault();
             if (!mouse.locked && gameRunning) {
                 canvas.requestPointerLock();
             }
@@ -730,15 +802,48 @@
             mouse.locked = document.pointerLockElement === canvas;
         });
         
+        // Mouse movement - works with pointer lock OR with drag
         document.addEventListener('mousemove', e => {
-            if (mouse.locked && gameRunning) {
+            if (!gameRunning) return;
+            
+            if (mouse.locked) {
+                // Pointer lock mode - use movementX
                 player.angle += e.movementX * 0.002;
+            } else if (mouseDown) {
+                // Drag mode (trackpad friendly) - use delta from last position
+                const deltaX = e.clientX - lastMouseX;
+                player.angle += deltaX * 0.005;
             }
+            lastMouseX = e.clientX;
         });
         
-        document.addEventListener('mousedown', () => {
-            if (gameRunning && mouse.locked) shoot();
+        // Track mouse button for drag-to-look (trackpad mode)
+        canvas.addEventListener('mousedown', e => {
+            mouseDown = true;
+            lastMouseX = e.clientX;
         });
+        
+        document.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+        
+        // Mouse wheel to switch weapons
+        canvas.addEventListener('wheel', e => {
+            if (!gameRunning) return;
+            e.preventDefault();
+            
+            let newWeapon = player.weapon + (e.deltaY > 0 ? 1 : -1);
+            // Find next unlocked weapon
+            for (let i = 0; i < WEAPONS.length; i++) {
+                const idx = (newWeapon + WEAPONS.length) % WEAPONS.length;
+                if (WEAPONS[idx].unlocked) {
+                    player.weapon = idx;
+                    updateWeaponHud();
+                    break;
+                }
+                newWeapon += (e.deltaY > 0 ? 1 : -1);
+            }
+        }, { passive: false });
         
         // Touch input (mobile/touchpad)
         setupTouchControls();
@@ -750,17 +855,20 @@
     function setupTouchControls() {
         const joystick = document.getElementById('moveJoystick');
         const joystickInner = document.getElementById('joystickInner');
+        const lookJoystick = document.getElementById('lookJoystick');
+        const lookInner = document.getElementById('lookInner');
         const shootBtn = document.getElementById('shootBtn');
         
         let joystickTouch = null;
-        let lookTouch = null;
-        let lastLookX = 0;
+        let lookJoystickTouch = null;
         
-        // Joystick movement
+        // Move Joystick
         joystick.addEventListener('touchstart', e => {
             e.preventDefault();
-            joystickTouch = e.touches[0].identifier;
-        });
+            for (const t of e.changedTouches) {
+                joystickTouch = t.identifier;
+            }
+        }, { passive: false });
         
         joystick.addEventListener('touchmove', e => {
             e.preventDefault();
@@ -772,7 +880,7 @@
                     let dx = t.clientX - centerX;
                     let dy = t.clientY - centerY;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    const maxDist = rect.width / 2 - 25;
+                    const maxDist = rect.width / 2 - 27;
                     
                     if (dist > maxDist) {
                         dx = (dx / dist) * maxDist;
@@ -784,46 +892,73 @@
                     touch.moveY = dy / maxDist;
                 }
             }
-        });
+        }, { passive: false });
         
         joystick.addEventListener('touchend', e => {
-            joystickTouch = null;
-            joystickInner.style.transform = 'translate(-50%, -50%)';
-            touch.moveX = 0;
-            touch.moveY = 0;
+            for (const t of e.changedTouches) {
+                if (t.identifier === joystickTouch) {
+                    joystickTouch = null;
+                    joystickInner.style.transform = 'translate(-50%, -50%)';
+                    touch.moveX = 0;
+                    touch.moveY = 0;
+                }
+            }
+        });
+        
+        // Look Joystick (right side)
+        lookJoystick.addEventListener('touchstart', e => {
+            e.preventDefault();
+            for (const t of e.changedTouches) {
+                lookJoystickTouch = t.identifier;
+            }
+        }, { passive: false });
+        
+        lookJoystick.addEventListener('touchmove', e => {
+            e.preventDefault();
+            for (const t of e.touches) {
+                if (t.identifier === lookJoystickTouch && gameRunning) {
+                    const rect = lookJoystick.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    let dx = t.clientX - centerX;
+                    const maxDist = rect.width / 2 - 27;
+                    
+                    if (Math.abs(dx) > maxDist) {
+                        dx = Math.sign(dx) * maxDist;
+                    }
+                    
+                    lookInner.style.transform = `translate(calc(-50% + ${dx}px), -50%)`;
+                    // Turn based on joystick position
+                    player.angle += dx * 0.002;
+                }
+            }
+        }, { passive: false });
+        
+        lookJoystick.addEventListener('touchend', e => {
+            for (const t of e.changedTouches) {
+                if (t.identifier === lookJoystickTouch) {
+                    lookJoystickTouch = null;
+                    lookInner.style.transform = 'translate(-50%, -50%)';
+                }
+            }
         });
         
         // Shoot button
         shootBtn.addEventListener('touchstart', e => {
             e.preventDefault();
             if (gameRunning) shoot();
-        });
+        }, { passive: false });
         
-        // Look control (touch anywhere else on screen)
+        // Also allow tapping center of screen to shoot
         canvas.addEventListener('touchstart', e => {
-            if (gameRunning) {
-                for (const t of e.touches) {
-                    const rect = joystick.getBoundingClientRect();
-                    if (t.clientX > rect.right + 50) {
-                        lookTouch = t.identifier;
-                        lastLookX = t.clientX;
-                    }
+            if (!gameRunning) return;
+            for (const t of e.changedTouches) {
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const dist = Math.sqrt((t.clientX - centerX) ** 2 + (t.clientY - centerY) ** 2);
+                if (dist < 100) {
+                    shoot();
                 }
             }
-        });
-        
-        canvas.addEventListener('touchmove', e => {
-            for (const t of e.touches) {
-                if (t.identifier === lookTouch && gameRunning) {
-                    const deltaX = t.clientX - lastLookX;
-                    player.angle += deltaX * 0.005;
-                    lastLookX = t.clientX;
-                }
-            }
-        });
-        
-        canvas.addEventListener('touchend', e => {
-            lookTouch = null;
         });
     }
     
