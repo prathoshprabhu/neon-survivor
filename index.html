@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>NEON SURVIVOR 3D | 2087</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
@@ -23,6 +23,7 @@
             font-family: 'Rajdhani', sans-serif;
             color: #fff;
             cursor: crosshair;
+            touch-action: none;
         }
         
         #gameCanvas {
@@ -125,6 +126,20 @@
         .score-label { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 2px; }
         .score-value { font-size: 32px; color: var(--neon-pink); text-shadow: 0 0 20px var(--neon-pink); }
         .kills-text { font-size: 14px; color: var(--neon-green); margin-top: 5px; }
+        .coins-text { font-size: 14px; color: #ffd700; margin-top: 3px; }
+        
+        #petHud {
+            top: 150px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--neon-purple);
+        }
+        
+        .pet-label { font-size: 10px; color: rgba(255,255,255,0.5); }
+        .pet-icon { font-size: 28px; }
+        .pet-bonus { font-size: 10px; color: var(--neon-green); }
         
         #ammoHud {
             bottom: 20px;
@@ -177,7 +192,7 @@
         .crosshair-line.left { width: 12px; height: 2px; left: -18px; top: 1px; }
         .crosshair-line.right { width: 12px; height: 2px; right: -18px; top: 1px; }
         
-        #startScreen, #gameOverScreen {
+        #startScreen, #gameOverScreen, #petShopScreen {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
@@ -190,7 +205,8 @@
             z-index: 100;
         }
         
-        #gameOverScreen { display: none; background: rgba(5,5,8,0.95); }
+        #gameOverScreen, #petShopScreen { display: none; }
+        #gameOverScreen { background: rgba(5,5,8,0.95); }
         
         .game-title {
             font-family: 'Orbitron', monospace;
@@ -222,6 +238,7 @@
             transition: all 0.3s;
             text-transform: uppercase;
             letter-spacing: 4px;
+            pointer-events: auto;
         }
         
         .start-button:hover {
@@ -241,6 +258,95 @@
         
         .game-over-title { font-size: 56px; color: #ff0044; text-shadow: 0 0 40px rgba(255,0,68,0.7); margin-bottom: 20px; }
         .final-score { font-size: 32px; color: var(--neon-purple); margin-bottom: 35px; }
+        
+        /* Pet Shop */
+        .shop-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 42px;
+            color: var(--neon-purple);
+            margin-bottom: 20px;
+        }
+        
+        .coins-display {
+            font-size: 24px;
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+        
+        .chest-options {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .chest-btn {
+            padding: 20px 30px;
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            color: #fff;
+            background: linear-gradient(135deg, rgba(100,50,0,0.5), rgba(150,100,0,0.5));
+            border: 2px solid #ffd700;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+        
+        .chest-btn:hover {
+            box-shadow: 0 0 30px rgba(255,215,0,0.5);
+            transform: scale(1.05);
+        }
+        
+        .chest-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .pet-collection {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+        
+        .pet-item {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            pointer-events: auto;
+        }
+        
+        .pet-item.equipped {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 15px rgba(0,255,106,0.5);
+        }
+        
+        .pet-item:hover { transform: scale(1.1); }
+        .pet-item .pet-emoji { font-size: 30px; }
+        .pet-item .pet-name { font-size: 8px; color: rgba(255,255,255,0.7); }
+        
+        .pet-result {
+            font-size: 48px;
+            margin: 20px;
+            animation: petReveal 0.5s ease-out;
+        }
+        
+        @keyframes petReveal {
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
         
         #notification {
             position: absolute;
@@ -286,6 +392,62 @@
             transition: opacity 0.1s;
             z-index: 10;
         }
+        
+        /* Touch Controls */
+        #touchControls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 20;
+        }
+        
+        .touch-joystick {
+            position: absolute;
+            bottom: 100px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(0,247,255,0.5);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: none;
+        }
+        
+        .touch-joystick-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(0,247,255,0.5);
+            border-radius: 50%;
+        }
+        
+        .touch-shoot {
+            position: absolute;
+            bottom: 120px;
+            right: 40px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255,100,50,0.3);
+            border: 2px solid rgba(255,100,50,0.7);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: none;
+            font-size: 30px;
+            color: #fff;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @media (pointer: coarse) {
+            .touch-joystick, .touch-shoot { display: flex; }
+        }
     </style>
 </head>
 <body>
@@ -294,16 +456,35 @@
     <div id="startScreen">
         <h1 class="game-title">NEON SURVIVOR 3D</h1>
         <p class="game-subtitle">YEAR 2087</p>
-        <button class="start-button" onclick="startGame()">ENTER THE MAZE</button>
+        <button class="start-button" onclick="openPetShop()">ENTER THE MAZE</button>
         <div class="controls-info">
-            <p><span>WASD / Arrows</span> Move | <span>MOUSE</span> Look | <span>CLICK</span> Shoot</p>
+            <p><span>WASD / Arrows</span> Move | <span>MOUSE/TOUCH</span> Look | <span>CLICK/TAP</span> Shoot</p>
             <p><span>1-7</span> Weapons | <span>SHIFT</span> Sprint</p>
         </div>
+    </div>
+    
+    <div id="petShopScreen">
+        <h2 class="shop-title">🐾 PET SHOP</h2>
+        <div class="coins-display">💰 Coins: <span id="shopCoins">100</span></div>
+        
+        <div class="chest-options">
+            <button class="chest-btn" onclick="buyChest('common')">📦 Common<br><small>50 coins</small></button>
+            <button class="chest-btn" onclick="buyChest('rare')">🎁 Rare<br><small>150 coins</small></button>
+            <button class="chest-btn" onclick="buyChest('legendary')">👑 Legendary<br><small>400 coins</small></button>
+        </div>
+        
+        <div id="petResult"></div>
+        
+        <p style="color: rgba(255,255,255,0.5); margin-bottom: 10px;">Your Pets (click to equip):</p>
+        <div class="pet-collection" id="petCollection"></div>
+        
+        <button class="start-button" onclick="startGame()">START GAME</button>
     </div>
     
     <div id="gameOverScreen">
         <h1 class="game-title game-over-title">TERMINATED</h1>
         <p class="final-score">SCORE: <span id="finalScore">0</span></p>
+        <p class="coins-text">+<span id="coinsEarned">0</span> coins earned!</p>
         <button class="start-button" onclick="restartGame()">TRY AGAIN</button>
     </div>
     
@@ -320,6 +501,12 @@
         </div>
     </div>
     
+    <div id="petHud" class="hud">
+        <div class="pet-label">PET</div>
+        <div class="pet-icon" id="equippedPetIcon">-</div>
+        <div class="pet-bonus" id="petBonusText"></div>
+    </div>
+    
     <div id="waveIndicator" class="hud">
         <div class="wave-text">WAVE <span id="waveNum">1</span></div>
         <div class="wave-enemies">Enemies: <span id="enemyCount">0/5</span></div>
@@ -329,6 +516,7 @@
         <div class="score-label">SCORE</div>
         <div class="score-value" id="scoreVal">0</div>
         <div class="kills-text">KILLS: <span id="killsVal">0</span></div>
+        <div class="coins-text">💰 <span id="coinsVal">0</span></div>
     </div>
     
     <div id="weaponHud" class="hud"></div>
@@ -352,6 +540,14 @@
     
     <div id="notification">🎯 NEW WEAPON!</div>
     <div id="damageOverlay"></div>
+    
+    <!-- Touch Controls -->
+    <div id="touchControls">
+        <div class="touch-joystick" id="moveJoystick">
+            <div class="touch-joystick-inner" id="joystickInner"></div>
+        </div>
+        <div class="touch-shoot" id="shootBtn">🎯</div>
+    </div>
 
     <script>
     // ============================================
@@ -372,12 +568,34 @@
         { id: 6, name: 'Railgun', icon: '⚡', damage: 200, fireRate: 2000, ammo: 5, range: 30, unlocked: false },
     ];
     
+    const PETS = {
+        common: [
+            { id: 'wolf', name: 'Wolf', emoji: '🐺', bonus: { damage: 1.1 }, desc: '+10% DMG' },
+            { id: 'cat', name: 'Cat', emoji: '🐱', bonus: { speed: 1.15 }, desc: '+15% Speed' },
+            { id: 'dog', name: 'Dog', emoji: '🐕', bonus: { health: 1.1 }, desc: '+10% HP' },
+            { id: 'fox', name: 'Fox', emoji: '🦊', bonus: { coins: 1.2 }, desc: '+20% Coins' },
+        ],
+        rare: [
+            { id: 'dragon', name: 'Dragon', emoji: '🐉', bonus: { damage: 1.25 }, desc: '+25% DMG' },
+            { id: 'phoenix', name: 'Phoenix', emoji: '🔥', bonus: { regen: 1 }, desc: '+1 HP/sec' },
+            { id: 'unicorn', name: 'Unicorn', emoji: '🦄', bonus: { shield: 1.5 }, desc: '+50% Shield' },
+            { id: 'tiger', name: 'Tiger', emoji: '🐅', bonus: { crit: 1.2 }, desc: '+20% Crit' },
+        ],
+        legendary: [
+            { id: 'clone', name: 'Clone', emoji: '👤', bonus: { damage: 1.5, speed: 1.2 }, desc: '+50% DMG +20% Speed' },
+            { id: 'cosmic', name: 'Cosmic Dragon', emoji: '🌟', bonus: { damage: 1.3, health: 1.3 }, desc: '+30% DMG +30% HP' },
+            { id: 'shadow', name: 'Shadow', emoji: '👻', bonus: { speed: 1.4, coins: 1.5 }, desc: '+40% Speed +50% Coins' },
+            { id: 'ancient', name: 'Ancient', emoji: '🗿', bonus: { health: 2, damage: 0.8 }, desc: '+100% HP' },
+        ]
+    };
+    
     // ============================================
     // GAME STATE
     // ============================================
     let canvas, ctx, miniCanvas, miniCtx;
     let gameRunning = false;
     let map = [];
+    let zBuffer = [];
     
     let player = {
         x: 0, y: 0,
@@ -388,11 +606,15 @@
         ammo: 75,
         score: 0,
         kills: 0,
+        coins: 100,
         lastShot: 0,
         bobPhase: 0,
         shooting: false,
         shootFrame: 0,
     };
+    
+    let ownedPets = [];
+    let equippedPet = null;
     
     let enemies = [];
     let bullets = [];
@@ -400,18 +622,19 @@
     
     let keys = {};
     let mouse = { x: 0, y: 0, locked: false };
+    let touch = { active: false, moveX: 0, moveY: 0, lookDelta: 0 };
     
     let wave = 1;
     let enemiesPerWave = 5;
     let enemiesSpawned = 0;
     let enemiesKilled = 0;
     let lastSpawn = 0;
+    let lastRegen = 0;
     
     // ============================================
     // MAZE GENERATION
     // ============================================
     function generateMaze() {
-        // Initialize with walls
         map = [];
         for (let y = 0; y < MAP_SIZE; y++) {
             map[y] = [];
@@ -420,7 +643,6 @@
             }
         }
         
-        // Recursive backtracker maze generation
         const stack = [];
         const startX = 1, startY = 1;
         map[startY][startX] = 0;
@@ -455,14 +677,12 @@
             }
         }
         
-        // Add some extra corridors for variety
         for (let i = 0; i < MAP_SIZE * 2; i++) {
             const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             const y = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             if (Math.random() < 0.3) map[y][x] = 0;
         }
         
-        // Ensure spawn area is clear
         map[1][1] = 0;
         map[1][2] = 0;
         map[2][1] = 0;
@@ -481,7 +701,7 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         
-        // Input
+        // Keyboard input
         document.addEventListener('keydown', e => {
             keys[e.key.toLowerCase()] = true;
             if (e.key >= '1' && e.key <= '7') {
@@ -494,6 +714,7 @@
         });
         document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         
+        // Mouse input (desktop)
         canvas.addEventListener('click', () => {
             if (!mouse.locked && gameRunning) {
                 canvas.requestPointerLock();
@@ -514,7 +735,91 @@
             if (gameRunning && mouse.locked) shoot();
         });
         
+        // Touch input (mobile/touchpad)
+        setupTouchControls();
+        
         updateWeaponHud();
+        updatePetCollection();
+    }
+    
+    function setupTouchControls() {
+        const joystick = document.getElementById('moveJoystick');
+        const joystickInner = document.getElementById('joystickInner');
+        const shootBtn = document.getElementById('shootBtn');
+        
+        let joystickTouch = null;
+        let lookTouch = null;
+        let lastLookX = 0;
+        
+        // Joystick movement
+        joystick.addEventListener('touchstart', e => {
+            e.preventDefault();
+            joystickTouch = e.touches[0].identifier;
+        });
+        
+        joystick.addEventListener('touchmove', e => {
+            e.preventDefault();
+            for (const t of e.touches) {
+                if (t.identifier === joystickTouch) {
+                    const rect = joystick.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    let dx = t.clientX - centerX;
+                    let dy = t.clientY - centerY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const maxDist = rect.width / 2 - 25;
+                    
+                    if (dist > maxDist) {
+                        dx = (dx / dist) * maxDist;
+                        dy = (dy / dist) * maxDist;
+                    }
+                    
+                    joystickInner.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                    touch.moveX = dx / maxDist;
+                    touch.moveY = dy / maxDist;
+                }
+            }
+        });
+        
+        joystick.addEventListener('touchend', e => {
+            joystickTouch = null;
+            joystickInner.style.transform = 'translate(-50%, -50%)';
+            touch.moveX = 0;
+            touch.moveY = 0;
+        });
+        
+        // Shoot button
+        shootBtn.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (gameRunning) shoot();
+        });
+        
+        // Look control (touch anywhere else on screen)
+        canvas.addEventListener('touchstart', e => {
+            if (gameRunning) {
+                for (const t of e.touches) {
+                    const rect = joystick.getBoundingClientRect();
+                    if (t.clientX > rect.right + 50) {
+                        lookTouch = t.identifier;
+                        lastLookX = t.clientX;
+                    }
+                }
+            }
+        });
+        
+        canvas.addEventListener('touchmove', e => {
+            for (const t of e.touches) {
+                if (t.identifier === lookTouch && gameRunning) {
+                    const deltaX = t.clientX - lastLookX;
+                    player.angle += deltaX * 0.005;
+                    lastLookX = t.clientX;
+                }
+            }
+        });
+        
+        canvas.addEventListener('touchend', e => {
+            lookTouch = null;
+        });
     }
     
     function resizeCanvas() {
@@ -522,6 +827,7 @@
         canvas.height = window.innerHeight;
         miniCanvas.width = 150;
         miniCanvas.height = 150;
+        zBuffer = new Array(canvas.width).fill(Infinity);
     }
     
     function updateWeaponHud() {
@@ -535,40 +841,111 @@
     }
     
     // ============================================
+    // PET SYSTEM
+    // ============================================
+    function openPetShop() {
+        document.getElementById('startScreen').style.display = 'none';
+        document.getElementById('petShopScreen').style.display = 'flex';
+        document.getElementById('shopCoins').textContent = player.coins;
+        updatePetCollection();
+    }
+    
+    function buyChest(tier) {
+        const costs = { common: 50, rare: 150, legendary: 400 };
+        const cost = costs[tier];
+        
+        if (player.coins < cost) {
+            showNotification('❌ Not enough coins!');
+            return;
+        }
+        
+        player.coins -= cost;
+        document.getElementById('shopCoins').textContent = player.coins;
+        
+        const petPool = PETS[tier];
+        const newPet = petPool[Math.floor(Math.random() * petPool.length)];
+        
+        if (!ownedPets.find(p => p.id === newPet.id)) {
+            ownedPets.push(newPet);
+        }
+        
+        document.getElementById('petResult').innerHTML = `
+            <div class="pet-result">${newPet.emoji}</div>
+            <p style="color: var(--neon-green)">${newPet.name}!</p>
+            <p style="color: rgba(255,255,255,0.7); font-size: 14px">${newPet.desc}</p>
+        `;
+        
+        updatePetCollection();
+    }
+    
+    function updatePetCollection() {
+        const container = document.getElementById('petCollection');
+        container.innerHTML = ownedPets.map(pet => `
+            <div class="pet-item ${equippedPet?.id === pet.id ? 'equipped' : ''}" onclick="equipPet('${pet.id}')">
+                <span class="pet-emoji">${pet.emoji}</span>
+                <span class="pet-name">${pet.name}</span>
+            </div>
+        `).join('') || '<p style="color: rgba(255,255,255,0.3)">No pets yet!</p>';
+    }
+    
+    function equipPet(petId) {
+        equippedPet = ownedPets.find(p => p.id === petId) || null;
+        updatePetCollection();
+        updatePetHud();
+    }
+    
+    function updatePetHud() {
+        if (equippedPet) {
+            document.getElementById('equippedPetIcon').textContent = equippedPet.emoji;
+            document.getElementById('petBonusText').textContent = equippedPet.desc;
+        } else {
+            document.getElementById('equippedPetIcon').textContent = '-';
+            document.getElementById('petBonusText').textContent = '';
+        }
+    }
+    
+    function getPetBonus(stat) {
+        if (!equippedPet || !equippedPet.bonus[stat]) return 1;
+        return equippedPet.bonus[stat];
+    }
+    
+    // ============================================
     // GAME CONTROLS
     // ============================================
     function startGame() {
-        document.getElementById('startScreen').style.display = 'none';
+        document.getElementById('petShopScreen').style.display = 'none';
         resetGame();
         gameRunning = true;
+        updatePetHud();
         requestAnimationFrame(gameLoop);
     }
     
     function restartGame() {
         document.getElementById('gameOverScreen').style.display = 'none';
-        resetGame();
-        gameRunning = true;
-        requestAnimationFrame(gameLoop);
+        openPetShop();
     }
     
     function resetGame() {
         generateMaze();
         
-        player = {
-            x: 1.5 * TILE_SIZE,
-            y: 1.5 * TILE_SIZE,
-            angle: 0,
-            health: 100, maxHealth: 100,
-            shield: 50, maxShield: 100,
-            weapon: 0,
-            ammo: 75,
-            score: 0,
-            kills: 0,
-            lastShot: 0,
-            bobPhase: 0,
-            shooting: false,
-            shootFrame: 0,
-        };
+        const healthMult = getPetBonus('health');
+        const shieldMult = getPetBonus('shield');
+        
+        player.x = 1.5 * TILE_SIZE;
+        player.y = 1.5 * TILE_SIZE;
+        player.angle = 0;
+        player.health = 100 * healthMult;
+        player.maxHealth = 100 * healthMult;
+        player.shield = 50 * shieldMult;
+        player.maxShield = 100 * shieldMult;
+        player.weapon = 0;
+        player.ammo = 75;
+        player.score = 0;
+        player.kills = 0;
+        player.lastShot = 0;
+        player.bobPhase = 0;
+        player.shooting = false;
+        player.shootFrame = 0;
         
         enemies = [];
         bullets = [];
@@ -577,6 +954,7 @@
         enemiesPerWave = 5;
         enemiesSpawned = 0;
         enemiesKilled = 0;
+        lastRegen = Date.now();
         
         WEAPONS.forEach((w, i) => w.unlocked = i === 0);
         updateWeaponHud();
@@ -586,7 +964,12 @@
     function gameOver() {
         gameRunning = false;
         document.exitPointerLock();
+        
+        const coinsEarned = Math.floor(player.score / 10);
+        player.coins += coinsEarned;
+        
         document.getElementById('finalScore').textContent = player.score;
+        document.getElementById('coinsEarned').textContent = coinsEarned;
         document.getElementById('gameOverScreen').style.display = 'flex';
     }
     
@@ -606,9 +989,12 @@
         const now = Date.now();
         
         // Player movement
-        const moveSpeed = keys['shift'] ? 4 : 2.5;
+        const baseSpeed = 2.5;
+        const speedMult = getPetBonus('speed');
+        const moveSpeed = (keys['shift'] ? 4 : baseSpeed) * speedMult;
         let dx = 0, dy = 0;
         
+        // Keyboard movement
         if (keys['w'] || keys['arrowup']) {
             dx += Math.cos(player.angle) * moveSpeed;
             dy += Math.sin(player.angle) * moveSpeed;
@@ -626,6 +1012,14 @@
             dy += Math.sin(player.angle + Math.PI/2) * moveSpeed;
         }
         
+        // Touch movement
+        if (touch.moveX !== 0 || touch.moveY !== 0) {
+            dx += Math.cos(player.angle) * (-touch.moveY) * moveSpeed;
+            dy += Math.sin(player.angle) * (-touch.moveY) * moveSpeed;
+            dx += Math.cos(player.angle + Math.PI/2) * touch.moveX * moveSpeed;
+            dy += Math.sin(player.angle + Math.PI/2) * touch.moveX * moveSpeed;
+        }
+        
         // Collision detection
         const newX = player.x + dx;
         const newY = player.y + dy;
@@ -641,6 +1035,13 @@
         // Head bob
         if (dx !== 0 || dy !== 0) {
             player.bobPhase += 0.15;
+        }
+        
+        // Pet regen bonus
+        const regenBonus = equippedPet?.bonus?.regen || 0;
+        if (regenBonus > 0 && now - lastRegen > 1000) {
+            player.health = Math.min(player.maxHealth, player.health + regenBonus);
+            lastRegen = now;
         }
         
         // Shooting animation
@@ -670,7 +1071,6 @@
             player.ammo += 30;
             showNotification(`⚡ WAVE ${wave}!`);
             
-            // Unlock weapons
             if (wave === 2 && !WEAPONS[1].unlocked) { WEAPONS[1].unlocked = true; showNotification('🔪 KNIFE UNLOCKED!'); }
             if (wave === 3 && !WEAPONS[2].unlocked) { WEAPONS[2].unlocked = true; showNotification('💥 .44 UNLOCKED!'); }
             if (wave === 5 && !WEAPONS[3].unlocked) { WEAPONS[3].unlocked = true; showNotification('🔫 RIFLE UNLOCKED!'); }
@@ -703,19 +1103,49 @@
         
         if (weapon.ammo > 0) player.ammo -= weapon.ammo;
         
-        // Raycast to find target
-        const hit = castRay(player.x, player.y, player.angle, weapon.range * TILE_SIZE);
+        const damageMult = getPetBonus('damage');
+        const critMult = getPetBonus('crit');
+        const isCrit = Math.random() < (critMult - 1);
+        const finalDamage = weapon.damage * damageMult * (isCrit ? 2 : 1);
+        
+        // Raycast to find target (only hits visible enemies)
+        const hit = castRayForShooting(player.x, player.y, player.angle, weapon.range * TILE_SIZE);
         
         if (hit.enemy) {
-            hit.enemy.health -= weapon.damage;
+            hit.enemy.health -= finalDamage;
+            if (isCrit) showNotification('💥 CRITICAL!');
             if (hit.enemy.health <= 0) {
                 killEnemy(hit.enemy);
             }
         }
     }
     
+    function castRayForShooting(startX, startY, angle, maxDist) {
+        // First find wall distance
+        const wallDist = castRayWall(startX, startY, angle);
+        
+        // Then check enemies closer than the wall
+        let hitEnemy = null;
+        let enemyDist = Infinity;
+        
+        for (const enemy of enemies) {
+            const eDist = Math.sqrt((enemy.x - startX) ** 2 + (enemy.y - startY) ** 2);
+            if (eDist < maxDist && eDist < wallDist && eDist < enemyDist) {
+                const angleToEnemy = Math.atan2(enemy.y - startY, enemy.x - startX);
+                let angleDiff = Math.abs(angleToEnemy - angle);
+                if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+                
+                if (angleDiff < 0.15) {
+                    hitEnemy = enemy;
+                    enemyDist = eDist;
+                }
+            }
+        }
+        
+        return { enemy: hitEnemy };
+    }
+    
     function spawnEnemy() {
-        // Find valid spawn position
         let attempts = 0;
         while (attempts < 50) {
             const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
@@ -755,7 +1185,6 @@
         const now = Date.now();
         
         enemies.forEach(enemy => {
-            // Move towards player
             const dx = player.x - enemy.x;
             const dy = player.y - enemy.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -771,7 +1200,6 @@
                 if (!isWall(enemy.x, newY)) enemy.y = newY;
             }
             
-            // Attack player
             if (dist < TILE_SIZE && now - enemy.lastAttack > 1000) {
                 enemy.lastAttack = now;
                 
@@ -796,11 +1224,12 @@
         if (idx > -1) enemies.splice(idx, 1);
         
         player.kills++;
-        player.score += enemy.score;
+        const coinBonus = getPetBonus('coins');
+        player.score += Math.floor(enemy.score * coinBonus);
         enemiesKilled++;
     }
     
-    function castRay(startX, startY, angle, maxDist) {
+    function castRayWall(startX, startY, angle) {
         const rayDirX = Math.cos(angle);
         const rayDirY = Math.sin(angle);
         
@@ -833,7 +1262,7 @@
         let side = 0;
         let dist = 0;
         
-        while (!hit && dist < maxDist / TILE_SIZE) {
+        while (!hit && dist < RENDER_DIST) {
             if (sideDistX < sideDistY) {
                 sideDistX += deltaDistX;
                 mapX += stepX;
@@ -853,31 +1282,7 @@
             }
         }
         
-        // Check for enemy hits
-        let hitEnemy = null;
-        let enemyDist = Infinity;
-        
-        for (const enemy of enemies) {
-            const eDist = Math.sqrt((enemy.x - startX) ** 2 + (enemy.y - startY) ** 2);
-            if (eDist < maxDist && eDist < enemyDist) {
-                // Check if enemy is in crosshair
-                const angleToEnemy = Math.atan2(enemy.y - startY, enemy.x - startX);
-                let angleDiff = Math.abs(angleToEnemy - angle);
-                if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
-                
-                if (angleDiff < 0.15) {
-                    hitEnemy = enemy;
-                    enemyDist = eDist;
-                }
-            }
-        }
-        
-        return {
-            dist: dist * TILE_SIZE,
-            side,
-            mapX, mapY,
-            enemy: hitEnemy,
-        };
+        return dist * TILE_SIZE;
     }
     
     // ============================================
@@ -886,50 +1291,52 @@
     function render() {
         // Sky gradient
         const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height / 2);
-        skyGrad.addColorStop(0, '#1a0a0a');
-        skyGrad.addColorStop(1, '#3a1515');
+        skyGrad.addColorStop(0, '#1a0505');
+        skyGrad.addColorStop(1, '#400a0a');
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
         
         // Floor gradient
         const floorGrad = ctx.createLinearGradient(0, canvas.height / 2, 0, canvas.height);
-        floorGrad.addColorStop(0, '#2a1a10');
-        floorGrad.addColorStop(1, '#0a0805');
+        floorGrad.addColorStop(0, '#2a0a0a');
+        floorGrad.addColorStop(1, '#0a0303');
         ctx.fillStyle = floorGrad;
         ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
         
-        // Raycasting for walls
+        // Reset z-buffer
+        zBuffer.fill(Infinity);
+        
+        // Raycasting for RED walls
         const numRays = canvas.width;
         const bob = Math.sin(player.bobPhase) * 5;
         
         for (let i = 0; i < numRays; i++) {
             const rayAngle = player.angle - FOV / 2 + (i / numRays) * FOV;
-            const ray = castRay(player.x, player.y, rayAngle, RENDER_DIST * TILE_SIZE);
+            const dist = castRayWall(player.x, player.y, rayAngle);
             
             // Fix fisheye
-            const correctedDist = ray.dist * Math.cos(rayAngle - player.angle);
+            const correctedDist = dist * Math.cos(rayAngle - player.angle);
+            zBuffer[i] = correctedDist;
             
             const wallHeight = (TILE_SIZE / correctedDist) * (canvas.height * 0.8);
             const wallTop = (canvas.height - wallHeight) / 2 + bob;
             
-            // Wall color based on side and distance
+            // RED wall color based on distance
             const shade = Math.max(0, 1 - correctedDist / (RENDER_DIST * TILE_SIZE));
-            const baseColor = ray.side === 0 ? 40 : 30;
-            const r = Math.floor(baseColor * shade + 20);
-            const g = Math.floor(baseColor * 0.6 * shade + 10);
-            const b = Math.floor(baseColor * 0.4 * shade + 5);
+            const r = Math.floor(180 * shade + 30);
+            const g = Math.floor(20 * shade + 5);
+            const b = Math.floor(20 * shade + 5);
             
             ctx.fillStyle = `rgb(${r},${g},${b})`;
             ctx.fillRect(i, wallTop, 1, wallHeight);
             
-            // Wall edge glow
-            if (ray.side === 0) {
-                ctx.fillStyle = `rgba(255, 100, 50, ${shade * 0.1})`;
-                ctx.fillRect(i, wallTop, 1, 3);
-            }
+            // Wall edge glow (red)
+            ctx.fillStyle = `rgba(255, 50, 50, ${shade * 0.2})`;
+            ctx.fillRect(i, wallTop, 1, 3);
+            ctx.fillRect(i, wallTop + wallHeight - 3, 1, 3);
         }
         
-        // Render enemies (sprite-based)
+        // Render enemies (sprite-based with occlusion)
         renderEnemies(bob);
         
         // Render weapon
@@ -940,7 +1347,7 @@
     }
     
     function renderEnemies(bob) {
-        // Sort by distance
+        // Sort by distance (far to near)
         const sortedEnemies = enemies.map(e => ({
             ...e,
             dist: Math.sqrt((e.x - player.x) ** 2 + (e.y - player.y) ** 2)
@@ -969,6 +1376,20 @@
             const spriteWidth = spriteHeight * 0.6;
             const spriteY = canvas.height / 2 - spriteHeight / 2 + bob;
             
+            // CHECK OCCLUSION - is enemy behind a wall?
+            const spriteScreenStart = Math.floor(screenX - spriteWidth / 2);
+            const spriteScreenEnd = Math.ceil(screenX + spriteWidth / 2);
+            
+            let visible = false;
+            for (let sx = Math.max(0, spriteScreenStart); sx < Math.min(canvas.width, spriteScreenEnd); sx++) {
+                if (dist < zBuffer[sx]) {
+                    visible = true;
+                    break;
+                }
+            }
+            
+            if (!visible) continue; // Enemy is fully occluded by walls
+            
             // Draw robot enemy
             const isBoss = enemy.color === '#1a1a1a';
             const isMedium = enemy.color === '#ff8800';
@@ -979,7 +1400,6 @@
             const s = spriteHeight / 2;
             
             // Glow
-            const glowColor = isBoss ? 'rgba(255,0,0,0.3)' : (isMedium ? 'rgba(255,136,0,0.3)' : 'rgba(255,50,50,0.3)');
             ctx.shadowColor = isBoss ? '#ff0000' : enemy.color;
             ctx.shadowBlur = 20;
             
@@ -1026,7 +1446,6 @@
         ctx.save();
         ctx.translate(weaponX, weaponY);
         
-        // Gun base
         ctx.fillStyle = '#2a2a35';
         ctx.shadowColor = '#00f7ff';
         ctx.shadowBlur = player.shooting ? 30 : 10;
@@ -1035,11 +1454,9 @@
         ctx.roundRect(-40, 0, 80, 120, 8);
         ctx.fill();
         
-        // Barrel
         ctx.fillStyle = '#1a1a20';
         ctx.fillRect(-15, -60, 30, 70);
         
-        // Muzzle flash
         if (player.shooting && player.shootFrame < 5) {
             ctx.fillStyle = '#ff6a00';
             ctx.shadowColor = '#ff6a00';
@@ -1052,9 +1469,10 @@
             ctx.fill();
         }
         
-        // Weapon icon
+        ctx.shadowBlur = 0;
         ctx.font = '40px Arial';
         ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
         ctx.fillText(weapon.icon, 0, 80);
         
         ctx.restore();
@@ -1066,11 +1484,11 @@
         miniCtx.fillStyle = 'rgba(0,0,0,0.8)';
         miniCtx.fillRect(0, 0, 150, 150);
         
-        // Draw walls
+        // Draw RED walls
         for (let y = 0; y < MAP_SIZE; y++) {
             for (let x = 0; x < MAP_SIZE; x++) {
                 if (map[y][x] === 1) {
-                    miniCtx.fillStyle = '#333';
+                    miniCtx.fillStyle = '#660000';
                     miniCtx.fillRect(x * scale, y * scale, scale, scale);
                 }
             }
@@ -1095,7 +1513,6 @@
         miniCtx.arc(px, py, 4, 0, Math.PI * 2);
         miniCtx.fill();
         
-        // Player direction
         miniCtx.strokeStyle = '#00f7ff';
         miniCtx.lineWidth = 2;
         miniCtx.beginPath();
@@ -1111,6 +1528,7 @@
         document.getElementById('shieldText').textContent = Math.floor(player.shield);
         document.getElementById('scoreVal').textContent = player.score;
         document.getElementById('killsVal').textContent = player.kills;
+        document.getElementById('coinsVal').textContent = player.coins;
         document.getElementById('ammoVal').textContent = player.ammo;
         document.getElementById('waveNum').textContent = wave;
         document.getElementById('enemyCount').textContent = `${enemiesKilled}/${enemiesPerWave}`;
