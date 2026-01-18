@@ -645,24 +645,184 @@
     
     const PETS = {
         common: [
-            { id: 'wolf', name: 'Wolf', emoji: '🐺', bonus: { damage: 1.1 }, desc: '+10% DMG' },
-            { id: 'cat', name: 'Cat', emoji: '🐱', bonus: { speed: 1.15 }, desc: '+15% Speed' },
-            { id: 'dog', name: 'Dog', emoji: '🐕', bonus: { health: 1.1 }, desc: '+10% HP' },
-            { id: 'fox', name: 'Fox', emoji: '🦊', bonus: { coins: 1.2 }, desc: '+20% Coins' },
+            { id: 'wolf', name: 'Wolf', color: '#888888', glowColor: '#aaaaaa', bonus: { damage: 1.1 }, desc: '+10% DMG' },
+            { id: 'cat', name: 'Cat', color: '#ffaa44', glowColor: '#ffcc88', bonus: { speed: 1.15 }, desc: '+15% Speed' },
+            { id: 'dog', name: 'Dog', color: '#aa7744', glowColor: '#cc9966', bonus: { health: 1.1 }, desc: '+10% HP' },
+            { id: 'fox', name: 'Fox', color: '#ff6633', glowColor: '#ff8855', bonus: { coins: 1.2 }, desc: '+20% Coins' },
         ],
         rare: [
-            { id: 'dragon', name: 'Dragon', emoji: '🐉', bonus: { damage: 1.25 }, desc: '+25% DMG' },
-            { id: 'phoenix', name: 'Phoenix', emoji: '🔥', bonus: { regen: 1 }, desc: '+1 HP/sec' },
-            { id: 'unicorn', name: 'Unicorn', emoji: '🦄', bonus: { shield: 1.5 }, desc: '+50% Shield' },
-            { id: 'tiger', name: 'Tiger', emoji: '🐅', bonus: { crit: 1.2 }, desc: '+20% Crit' },
+            { id: 'dragon', name: 'Dragon', color: '#22cc44', glowColor: '#44ff66', bonus: { damage: 1.25 }, desc: '+25% DMG' },
+            { id: 'phoenix', name: 'Phoenix', color: '#ff4400', glowColor: '#ff8833', bonus: { regen: 1 }, desc: '+1 HP/sec' },
+            { id: 'unicorn', name: 'Unicorn', color: '#ff88ff', glowColor: '#ffaaff', bonus: { shield: 1.5 }, desc: '+50% Shield' },
+            { id: 'tiger', name: 'Tiger', color: '#ffaa00', glowColor: '#ffcc33', bonus: { crit: 1.2 }, desc: '+20% Crit' },
         ],
         legendary: [
-            { id: 'clone', name: 'Clone', emoji: '👤', bonus: { damage: 1.5, speed: 1.2 }, desc: '+50% DMG +20% Speed' },
-            { id: 'cosmic', name: 'Cosmic Dragon', emoji: '🌟', bonus: { damage: 1.3, health: 1.3 }, desc: '+30% DMG +30% HP' },
-            { id: 'shadow', name: 'Shadow', emoji: '👻', bonus: { speed: 1.4, coins: 1.5 }, desc: '+40% Speed +50% Coins' },
-            { id: 'ancient', name: 'Ancient', emoji: '🗿', bonus: { health: 2, damage: 0.8 }, desc: '+100% HP' },
+            { id: 'clone', name: 'Clone', color: '#00ffff', glowColor: '#88ffff', bonus: { damage: 1.5, speed: 1.2 }, desc: '+50% DMG +20% Speed' },
+            { id: 'cosmic', name: 'Cosmic Dragon', color: '#aa00ff', glowColor: '#cc44ff', bonus: { damage: 1.3, health: 1.3 }, desc: '+30% DMG +30% HP' },
+            { id: 'shadow', name: 'Shadow', color: '#222222', glowColor: '#444488', bonus: { speed: 1.4, coins: 1.5 }, desc: '+40% Speed +50% Coins' },
+            { id: 'ancient', name: 'Ancient', color: '#886644', glowColor: '#aa8866', bonus: { health: 2, damage: 0.8 }, desc: '+100% HP' },
         ]
     };
+    
+    // ============================================
+    // AUDIO SYSTEM
+    // ============================================
+    let audioCtx = null;
+    let musicGain = null;
+    let lastHorrorSound = 0;
+    
+    function initAudio() {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        musicGain = audioCtx.createGain();
+        musicGain.gain.value = 0.3;
+        musicGain.connect(audioCtx.destination);
+        
+        // Start ambient music
+        playAmbientMusic();
+        
+        // Schedule random horror sounds
+        setInterval(() => {
+            if (gameRunning && Date.now() - lastHorrorSound > 15000) {
+                if (Math.random() < 0.4) {
+                    playHorrorSound();
+                    lastHorrorSound = Date.now();
+                }
+            }
+        }, 5000);
+    }
+    
+    function playAmbientMusic() {
+        if (!audioCtx) return;
+        
+        // Create spooky drone
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const osc3 = audioCtx.createOscillator();
+        const lfo = audioCtx.createOscillator();
+        const lfoGain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        const gain = audioCtx.createGain();
+        
+        // Deep bass drone
+        osc1.type = 'sawtooth';
+        osc1.frequency.value = 55; // Low A
+        
+        // Eerie mid tone
+        osc2.type = 'sine';
+        osc2.frequency.value = 110;
+        
+        // High creepy tone
+        osc3.type = 'triangle';
+        osc3.frequency.value = 220;
+        
+        // LFO for wobble
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.1;
+        lfoGain.gain.value = 20;
+        
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc1.frequency);
+        lfoGain.connect(filter.frequency);
+        
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+        filter.Q.value = 5;
+        
+        gain.gain.value = 0.08;
+        
+        osc1.connect(filter);
+        osc2.connect(filter);
+        osc3.connect(gain);
+        filter.connect(gain);
+        gain.connect(musicGain);
+        
+        osc1.start();
+        osc2.start();
+        osc3.start();
+        lfo.start();
+    }
+    
+    function playHorrorSound() {
+        if (!audioCtx) return;
+        
+        const type = Math.floor(Math.random() * 4);
+        
+        if (type === 0) {
+            // Cave drip / distant scream
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 1.5);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1.5);
+        } else if (type === 1) {
+            // Deep rumble
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.value = 40 + Math.random() * 20;
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 2);
+        } else if (type === 2) {
+            // Whisper / wind
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * 0.1;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1000;
+            filter.Q.value = 10;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.5);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        } else {
+            // Metallic clang
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = 150 + Math.random() * 100;
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+        }
+    }
+    
+    function playShootSound() {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    }
     
     // ============================================
     // GAME STATE
@@ -690,10 +850,13 @@
     
     let ownedPets = [];
     let equippedPet = null;
+    let petState = { x: 0, y: 0, targetX: 0, targetY: 0 }; // Pet follows player
     
     let enemies = [];
     let bullets = [];
     let pickups = [];
+    let resources = [];
+    let paintings = []; // Creepy moving paintings on walls
     
     let keys = {};
     let mouse = { x: 0, y: 0, locked: false };
@@ -1020,7 +1183,9 @@
         }
         
         document.getElementById('petResult').innerHTML = `
-            <div class="pet-result">${newPet.emoji}</div>
+            <div class="pet-result" style="display:flex;justify-content:center;">
+                <div style="width:80px;height:55px;background:${newPet.color};border-radius:50%;box-shadow:0 0 30px ${newPet.glowColor};"></div>
+            </div>
             <p style="color: var(--neon-green)">${newPet.name}!</p>
             <p style="color: rgba(255,255,255,0.7); font-size: 14px">${newPet.desc}</p>
         `;
@@ -1032,7 +1197,7 @@
         const container = document.getElementById('petCollection');
         container.innerHTML = ownedPets.map(pet => `
             <div class="pet-item ${equippedPet?.id === pet.id ? 'equipped' : ''}" onclick="equipPet('${pet.id}')">
-                <span class="pet-emoji">${pet.emoji}</span>
+                <div style="width:35px;height:25px;background:${pet.color};border-radius:50%;box-shadow:0 0 10px ${pet.glowColor};"></div>
                 <span class="pet-name">${pet.name}</span>
             </div>
         `).join('') || '<p style="color: rgba(255,255,255,0.3)">No pets yet!</p>';
@@ -1046,7 +1211,7 @@
     
     function updatePetHud() {
         if (equippedPet) {
-            document.getElementById('equippedPetIcon').textContent = equippedPet.emoji;
+            document.getElementById('equippedPetIcon').innerHTML = `<div style="width:30px;height:20px;background:${equippedPet.color};border-radius:50%;box-shadow:0 0 8px ${equippedPet.glowColor};margin:0 auto;"></div>`;
             document.getElementById('petBonusText').textContent = equippedPet.desc;
         } else {
             document.getElementById('equippedPetIcon').textContent = '-';
@@ -1105,11 +1270,24 @@
         enemies = [];
         bullets = [];
         pickups = [];
+        resources = [];
         wave = 1;
-        enemiesPerWave = 5;
+        enemiesPerWave = 8; // More enemies per wave
         enemiesSpawned = 0;
         enemiesKilled = 0;
         lastRegen = Date.now();
+        
+        // Initialize pet position
+        petState.x = player.x;
+        petState.y = player.y;
+        
+        // Initialize creepy paintings
+        initPaintings();
+        
+        // Start audio if not already
+        if (!audioCtx) {
+            initAudio();
+        }
         
         WEAPONS.forEach((w, i) => w.unlocked = i === 0);
         updateWeaponHud();
@@ -1143,10 +1321,10 @@
     function update() {
         const now = Date.now();
         
-        // Player movement
-        const baseSpeed = 2.5;
+        // Player movement - FASTER speed
+        const baseSpeed = 4.5;
         const speedMult = getPetBonus('speed');
-        const moveSpeed = (keys['shift'] ? 4 : baseSpeed) * speedMult;
+        const moveSpeed = (keys['shift'] ? 7 : baseSpeed) * speedMult;
         let dx = 0, dy = 0;
         
         // Movement based on selected control scheme
@@ -1243,10 +1421,37 @@
             }
         }
         
-        // Spawn enemies
-        if (now - lastSpawn > 2000 && enemiesSpawned < enemiesPerWave) {
+        // Spawn enemies - MORE frequently
+        if (now - lastSpawn > 1200 && enemiesSpawned < enemiesPerWave) {
             spawnEnemy();
             lastSpawn = now;
+        }
+        
+        // Spawn resources occasionally
+        if (Math.random() < 0.002 && resources.length < 10) {
+            spawnResource();
+        }
+        
+        // Update pet position (follows player)
+        if (equippedPet) {
+            const followDist = 50;
+            petState.targetX = player.x - Math.cos(player.angle) * followDist;
+            petState.targetY = player.y - Math.sin(player.angle) * followDist;
+            petState.x += (petState.targetX - petState.x) * 0.1;
+            petState.y += (petState.targetY - petState.y) * 0.1;
+        }
+        
+        // Collect resources
+        for (let i = resources.length - 1; i >= 0; i--) {
+            const r = resources[i];
+            const dist = Math.sqrt((r.x - player.x) ** 2 + (r.y - player.y) ** 2);
+            if (dist < 30) {
+                if (r.type === 'ammo') player.ammo += 25;
+                else if (r.type === 'health') player.health = Math.min(player.maxHealth, player.health + 30);
+                else if (r.type === 'shield') player.shield = Math.min(player.maxShield, player.shield + 20);
+                resources.splice(i, 1);
+                showNotification(`+${r.type.toUpperCase()}!`);
+            }
         }
         
         // Update enemies
@@ -1290,6 +1495,7 @@
         player.lastShot = now;
         player.shooting = true;
         player.shootFrame = 0;
+        playShootSound();
         
         if (weapon.ammo > 0) player.ammo -= weapon.ammo;
         
@@ -1417,6 +1623,54 @@
         const coinBonus = getPetBonus('coins');
         player.score += Math.floor(enemy.score * coinBonus);
         enemiesKilled++;
+        
+        // Chance to drop resource
+        if (Math.random() < 0.3) {
+            const types = ['ammo', 'health', 'shield'];
+            resources.push({
+                x: enemy.x,
+                y: enemy.y,
+                type: types[Math.floor(Math.random() * types.length)]
+            });
+        }
+    }
+    
+    function spawnResource() {
+        let attempts = 0;
+        while (attempts < 30) {
+            const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
+            const y = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
+            if (map[y][x] === 0) {
+                const types = ['ammo', 'health', 'shield'];
+                resources.push({
+                    x: (x + 0.5) * TILE_SIZE,
+                    y: (y + 0.5) * TILE_SIZE,
+                    type: types[Math.floor(Math.random() * types.length)]
+                });
+                return;
+            }
+            attempts++;
+        }
+    }
+    
+    function initPaintings() {
+        paintings = [];
+        // Place creepy paintings on random walls
+        for (let i = 0; i < 15; i++) {
+            const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
+            const y = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
+            if (map[y][x] === 1) { // On a wall
+                paintings.push({
+                    x: x * TILE_SIZE + TILE_SIZE / 2,
+                    y: y * TILE_SIZE + TILE_SIZE / 2,
+                    mapX: x,
+                    mapY: y,
+                    eyeOffset: 0,
+                    blinkTimer: Math.random() * 100,
+                    type: Math.floor(Math.random() * 3) // Different painting types
+                });
+            }
+        }
     }
     
     function castRayWall(startX, startY, angle) {
@@ -1560,8 +1814,8 @@
             const correctedDist = dist * Math.cos(rayAngle - player.angle);
             zBuffer[i] = correctedDist;
             
-            // MUCH TALLER walls (2.5x height)
-            const wallHeight = (TILE_SIZE / correctedDist) * (canvas.height * 2.0);
+            // EXTREMELY TALL walls (3.5x height)
+            const wallHeight = (TILE_SIZE / correctedDist) * (canvas.height * 3.5);
             const wallTop = (canvas.height - wallHeight) / 2 + bob;
             
             // Distance-based shading (fog effect)
@@ -1599,10 +1853,52 @@
                 ctx.fillStyle = `rgba(0, 0, 0, ${(0.1 - edgeDist) * 5 * distShade})`;
                 ctx.fillRect(i, wallTop, 1, wallHeight);
             }
+            
+            // Check for paintings on this wall segment
+            for (const painting of paintings) {
+                if (rayResult.mapX === painting.mapX && rayResult.mapY === painting.mapY) {
+                    // Draw painting on wall
+                    const paintingSize = wallHeight * 0.3;
+                    const paintingY = wallTop + wallHeight * 0.3;
+                    
+                    // Only draw if this ray is in the middle of the wall
+                    if (hitPos > 0.3 && hitPos < 0.7) {
+                        // Painting frame
+                        ctx.fillStyle = `rgba(60, 40, 20, ${distShade})`;
+                        ctx.fillRect(i, paintingY, 1, paintingSize);
+                        
+                        // Creepy face that follows player
+                        if (hitPos > 0.4 && hitPos < 0.6) {
+                            painting.eyeOffset = Math.sin(Date.now() * 0.002) * 2;
+                            painting.blinkTimer--;
+                            
+                            const eyeY = paintingY + paintingSize * 0.35;
+                            const mouthY = paintingY + paintingSize * 0.7;
+                            
+                            // Eyes (move slightly)
+                            if (painting.blinkTimer > 5 || painting.blinkTimer < 0) {
+                                ctx.fillStyle = `rgba(255, 200, 200, ${distShade * 0.8})`;
+                                ctx.fillRect(i, eyeY + painting.eyeOffset, 1, 2);
+                            }
+                            if (painting.blinkTimer < 0) painting.blinkTimer = 100 + Math.random() * 100;
+                            
+                            // Creepy smile
+                            ctx.fillStyle = `rgba(80, 0, 0, ${distShade * 0.6})`;
+                            ctx.fillRect(i, mouthY, 1, 1);
+                        }
+                    }
+                }
+            }
         }
         
         // Render enemies (sprite-based with occlusion)
         renderEnemies(bob);
+        
+        // Render resources
+        renderResources(bob);
+        
+        // Render pet following player
+        renderPet(bob);
         
         // Render weapon
         renderWeapon(bob);
@@ -1701,6 +1997,116 @@
             
             ctx.restore();
         }
+    }
+    
+    function renderResources(bob) {
+        for (const res of resources) {
+            const dx = res.x - player.x;
+            const dy = res.y - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            const angleToRes = Math.atan2(dy, dx);
+            let relAngle = angleToRes - player.angle;
+            while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+            while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+            
+            if (Math.abs(relAngle) > FOV / 2 + 0.3) continue;
+            if (dist > RENDER_DIST * TILE_SIZE) continue;
+            if (dist > zBuffer[Math.floor(canvas.width / 2 + (relAngle / FOV) * canvas.width)]) continue;
+            
+            const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+            const size = (TILE_SIZE * 0.4 / dist) * canvas.height;
+            const screenY = canvas.height / 2 + bob;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Draw resource as glowing orb
+            const colors = { ammo: '#ffaa00', health: '#ff4444', shield: '#44aaff' };
+            const color = colors[res.type] || '#ffffff';
+            
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Inner glow
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+    }
+    
+    function renderPet(bob) {
+        if (!equippedPet) return;
+        
+        const dx = petState.x - player.x;
+        const dy = petState.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 10) return; // Too close
+        
+        const angleToRes = Math.atan2(dy, dx);
+        let relAngle = angleToRes - player.angle;
+        while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+        while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+        
+        if (Math.abs(relAngle) > FOV / 2 + 0.5) return;
+        
+        const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+        const size = (TILE_SIZE * 0.5 / dist) * canvas.height;
+        const screenY = canvas.height / 2 + bob + Math.sin(Date.now() * 0.005) * 5;
+        
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        
+        // Draw pet as a creature sprite
+        const color = equippedPet.color;
+        const glow = equippedPet.glowColor;
+        
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 25;
+        
+        // Body
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 0.5, size * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(size * 0.3, -size * 0.1, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eyes (glowing)
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(size * 0.35, -size * 0.15, size * 0.08, 0, Math.PI * 2);
+        ctx.arc(size * 0.45, -size * 0.12, size * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Legs (animated)
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color;
+        const legAnim = Math.sin(Date.now() * 0.01) * size * 0.1;
+        ctx.fillRect(-size * 0.3, size * 0.2, size * 0.12, size * 0.3 + legAnim);
+        ctx.fillRect(size * 0.1, size * 0.2, size * 0.12, size * 0.3 - legAnim);
+        
+        // Tail
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.4, 0);
+        ctx.quadraticCurveTo(-size * 0.7, -size * 0.2 + Math.sin(Date.now() * 0.008) * size * 0.2, -size * 0.6, -size * 0.4);
+        ctx.lineWidth = size * 0.1;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        
+        ctx.restore();
     }
     
     function renderWeapon(bob) {
