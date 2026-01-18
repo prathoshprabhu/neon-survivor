@@ -527,7 +527,7 @@
         
         <div class="controls-info">
             <p>🖱️ <span>MOVE MOUSE</span> to look | <span>DOUBLE-CLICK</span> for infinite turn</p>
-            <p>🖱️ <span>CLICK</span> to shoot | <span>EDGE OF SCREEN</span> = auto-turn</p>
+            <p>🖱️ <span>CLICK</span> to shoot | <span>M</span> = VR Tactical Map</p>
             <p>📱 Touch joysticks for mobile/tablet</p>
         </div>
     </div>
@@ -1201,6 +1201,10 @@
             if (e.key === ' ' && gameRunning) {
                 e.preventDefault();
                 shoot();
+            }
+            // M to toggle VR map
+            if (e.key === 'm' && gameRunning) {
+                vrMapOpen = !vrMapOpen;
             }
         });
         document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -2301,6 +2305,9 @@
         
         // Render minimap
         renderMinimap();
+        
+        // VR Map overlay (if open)
+        renderVRMap();
     }
     
     function renderEnemies(bob) {
@@ -2728,46 +2735,272 @@
     }
     
     function renderMinimap() {
-        const scale = 150 / MAP_SIZE;
+        // Fixed view radius around player (not whole map)
+        const viewRadius = 12; // tiles around player
+        const tileSize = 150 / (viewRadius * 2);
         
-        miniCtx.fillStyle = 'rgba(0,0,0,0.8)';
+        const playerTileX = player.x / TILE_SIZE;
+        const playerTileY = player.y / TILE_SIZE;
+        
+        miniCtx.fillStyle = 'rgba(0,0,0,0.85)';
         miniCtx.fillRect(0, 0, 150, 150);
         
-        // Draw RED walls
-        for (let y = 0; y < MAP_SIZE; y++) {
-            for (let x = 0; x < MAP_SIZE; x++) {
-                if (map[y][x] === 1) {
-                    miniCtx.fillStyle = '#660000';
-                    miniCtx.fillRect(x * scale, y * scale, scale, scale);
+        // Draw circular mask effect
+        miniCtx.save();
+        miniCtx.beginPath();
+        miniCtx.arc(75, 75, 70, 0, Math.PI * 2);
+        miniCtx.clip();
+        
+        // Draw RED walls (only visible area)
+        for (let dy = -viewRadius; dy <= viewRadius; dy++) {
+            for (let dx = -viewRadius; dx <= viewRadius; dx++) {
+                const mapX = Math.floor(playerTileX + dx);
+                const mapY = Math.floor(playerTileY + dy);
+                
+                if (mapX >= 0 && mapX < MAP_SIZE && mapY >= 0 && mapY < MAP_SIZE) {
+                    const screenX = 75 + dx * tileSize;
+                    const screenY = 75 + dy * tileSize;
+                    
+                    if (map[mapY] && map[mapY][mapX] === 1) {
+                        miniCtx.fillStyle = '#660000';
+                        miniCtx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
+                    } else {
+                        // Floor
+                        miniCtx.fillStyle = '#1a0505';
+                        miniCtx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
+                    }
                 }
             }
         }
         
         // Draw enemies
         miniCtx.fillStyle = '#ff3333';
+        miniCtx.shadowColor = '#ff0000';
+        miniCtx.shadowBlur = 5;
         for (const enemy of enemies) {
-            const ex = (enemy.x / TILE_SIZE) * scale;
-            const ey = (enemy.y / TILE_SIZE) * scale;
-            miniCtx.beginPath();
-            miniCtx.arc(ex, ey, 3, 0, Math.PI * 2);
-            miniCtx.fill();
+            const ex = 75 + (enemy.x / TILE_SIZE - playerTileX) * tileSize;
+            const ey = 75 + (enemy.y / TILE_SIZE - playerTileY) * tileSize;
+            if (ex > 5 && ex < 145 && ey > 5 && ey < 145) {
+                miniCtx.beginPath();
+                miniCtx.arc(ex, ey, 4, 0, Math.PI * 2);
+                miniCtx.fill();
+            }
         }
         
-        // Draw player
-        const px = (player.x / TILE_SIZE) * scale;
-        const py = (player.y / TILE_SIZE) * scale;
+        // Draw resources
+        miniCtx.shadowBlur = 0;
+        for (const res of resources) {
+            const rx = 75 + (res.x / TILE_SIZE - playerTileX) * tileSize;
+            const ry = 75 + (res.y / TILE_SIZE - playerTileY) * tileSize;
+            if (rx > 5 && rx < 145 && ry > 5 && ry < 145) {
+                const colors = { ammo: '#ffaa00', health: '#00ff00', shield: '#00aaff' };
+                miniCtx.fillStyle = colors[res.type] || '#ffffff';
+                miniCtx.beginPath();
+                miniCtx.arc(rx, ry, 3, 0, Math.PI * 2);
+                miniCtx.fill();
+            }
+        }
         
+        // Draw player (always center)
         miniCtx.fillStyle = '#00f7ff';
+        miniCtx.shadowColor = '#00f7ff';
+        miniCtx.shadowBlur = 8;
         miniCtx.beginPath();
-        miniCtx.arc(px, py, 4, 0, Math.PI * 2);
+        miniCtx.arc(75, 75, 5, 0, Math.PI * 2);
         miniCtx.fill();
         
+        // Player direction
         miniCtx.strokeStyle = '#00f7ff';
         miniCtx.lineWidth = 2;
         miniCtx.beginPath();
-        miniCtx.moveTo(px, py);
-        miniCtx.lineTo(px + Math.cos(player.angle) * 10, py + Math.sin(player.angle) * 10);
+        miniCtx.moveTo(75, 75);
+        miniCtx.lineTo(75 + Math.cos(player.angle) * 15, 75 + Math.sin(player.angle) * 15);
         miniCtx.stroke();
+        
+        miniCtx.restore();
+        
+        // Circular border
+        miniCtx.strokeStyle = '#00f7ff';
+        miniCtx.lineWidth = 2;
+        miniCtx.shadowBlur = 10;
+        miniCtx.beginPath();
+        miniCtx.arc(75, 75, 72, 0, Math.PI * 2);
+        miniCtx.stroke();
+        miniCtx.shadowBlur = 0;
+    }
+    
+    // VR-style full map overlay
+    let vrMapOpen = false;
+    
+    function renderVRMap() {
+        if (!vrMapOpen) return;
+        
+        // Darken background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // VR frame effect
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const mapSize = Math.min(canvas.width, canvas.height) * 0.7;
+        
+        // Holographic glow
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, mapSize);
+        gradient.addColorStop(0, 'rgba(0, 50, 80, 0.3)');
+        gradient.addColorStop(0.7, 'rgba(0, 30, 50, 0.2)');
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Map viewport
+        const viewRadius = 25;
+        const tileSize = mapSize / (viewRadius * 2);
+        const playerTileX = player.x / TILE_SIZE;
+        const playerTileY = player.y / TILE_SIZE;
+        
+        ctx.save();
+        
+        // Circular clip
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, mapSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+        
+        // Grid lines (holographic effect)
+        ctx.strokeStyle = 'rgba(0, 150, 200, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = -viewRadius; i <= viewRadius; i++) {
+            const x = centerX + i * tileSize;
+            const y = centerY + i * tileSize;
+            ctx.beginPath();
+            ctx.moveTo(x, centerY - mapSize/2);
+            ctx.lineTo(x, centerY + mapSize/2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(centerX - mapSize/2, y);
+            ctx.lineTo(centerX + mapSize/2, y);
+            ctx.stroke();
+        }
+        
+        // Draw walls
+        for (let dy = -viewRadius; dy <= viewRadius; dy++) {
+            for (let dx = -viewRadius; dx <= viewRadius; dx++) {
+                const mapX = Math.floor(playerTileX + dx);
+                const mapY = Math.floor(playerTileY + dy);
+                
+                if (mapX >= 0 && mapX < MAP_SIZE && mapY >= 0 && mapY < MAP_SIZE) {
+                    const screenX = centerX + dx * tileSize;
+                    const screenY = centerY + dy * tileSize;
+                    
+                    if (map[mapY] && map[mapY][mapX] === 1) {
+                        ctx.fillStyle = 'rgba(150, 30, 30, 0.8)';
+                        ctx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize - 1, tileSize - 1);
+                    }
+                }
+            }
+        }
+        
+        // Draw enemies
+        ctx.fillStyle = '#ff4444';
+        ctx.shadowColor = '#ff0000';
+        ctx.shadowBlur = 15;
+        for (const enemy of enemies) {
+            const ex = centerX + (enemy.x / TILE_SIZE - playerTileX) * tileSize;
+            const ey = centerY + (enemy.y / TILE_SIZE - playerTileY) * tileSize;
+            const dist = Math.sqrt((ex - centerX) ** 2 + (ey - centerY) ** 2);
+            if (dist < mapSize / 2) {
+                ctx.beginPath();
+                ctx.arc(ex, ey, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Enemy label
+                ctx.font = '10px Orbitron';
+                ctx.fillStyle = '#ff6666';
+                ctx.fillText('HOSTILE', ex - 20, ey + 20);
+            }
+        }
+        
+        // Draw resources
+        ctx.shadowBlur = 10;
+        for (const res of resources) {
+            const rx = centerX + (res.x / TILE_SIZE - playerTileX) * tileSize;
+            const ry = centerY + (res.y / TILE_SIZE - playerTileY) * tileSize;
+            const dist = Math.sqrt((rx - centerX) ** 2 + (ry - centerY) ** 2);
+            if (dist < mapSize / 2) {
+                const colors = { ammo: '#ffaa00', health: '#00ff00', shield: '#00aaff' };
+                ctx.fillStyle = colors[res.type] || '#ffffff';
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Draw pet
+        if (equippedPet) {
+            const petX = centerX + (petState.x / TILE_SIZE - playerTileX) * tileSize;
+            const petY = centerY + (petState.y / TILE_SIZE - playerTileY) * tileSize;
+            ctx.fillStyle = equippedPet.color;
+            ctx.shadowColor = equippedPet.glowColor;
+            ctx.beginPath();
+            ctx.arc(petX, petY, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw player (center)
+        ctx.fillStyle = '#00f7ff';
+        ctx.shadowColor = '#00f7ff';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Player direction cone
+        ctx.fillStyle = 'rgba(0, 247, 255, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, 80, player.angle - 0.4, player.angle + 0.4);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.restore();
+        
+        // VR frame border
+        ctx.strokeStyle = '#00f7ff';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#00f7ff';
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, mapSize / 2 + 5, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Corner decorations
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#00f7ff';
+        ctx.font = '14px Orbitron';
+        ctx.fillText('TACTICAL MAP', centerX - 55, centerY - mapSize/2 - 20);
+        ctx.font = '12px Orbitron';
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillText('[M] to close', centerX - 40, centerY + mapSize/2 + 30);
+        
+        // Compass
+        const compassR = 30;
+        const compassX = centerX + mapSize/2 - 50;
+        const compassY = centerY - mapSize/2 + 50;
+        ctx.strokeStyle = '#00f7ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(compassX, compassY, compassR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#ff4444';
+        ctx.beginPath();
+        ctx.moveTo(compassX, compassY - compassR + 5);
+        ctx.lineTo(compassX - 5, compassY);
+        ctx.lineTo(compassX + 5, compassY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#00f7ff';
+        ctx.font = '10px Orbitron';
+        ctx.fillText('N', compassX - 4, compassY - compassR - 5);
     }
     
     function updateHud() {
