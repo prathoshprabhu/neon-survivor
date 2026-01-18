@@ -1027,113 +1027,150 @@
         }
     }
     
-    function expandMaze(playerX, playerY) {
+    function expandMazeDirection(direction) {
+        const expandAmount = 12;
         const oldSize = MAP_SIZE;
-        const expandAmount = 16;
         
-        // Determine which direction to expand
-        let shiftX = 0, shiftY = 0;
-        
-        if (playerX > MAP_SIZE - 8) {
-            // Expand right
-            MAP_SIZE += expandAmount;
-            for (let y = 0; y < oldSize; y++) {
-                for (let x = oldSize; x < MAP_SIZE; x++) {
-                    if (!map[y]) map[y] = [];
-                    map[y][x] = 1; // Wall by default
+        if (direction === 'right') {
+            // Expand map to the right
+            const newSize = MAP_SIZE + expandAmount;
+            for (let y = 0; y < newSize; y++) {
+                if (!map[y]) map[y] = [];
+                for (let x = oldSize; x < newSize; x++) {
+                    map[y][x] = 1;
                 }
             }
+            MAP_SIZE = newSize;
+            carvePassages(oldSize - 3, 1, newSize - 1, MAP_SIZE - 1);
         }
-        if (playerY > MAP_SIZE - 8) {
-            // Expand down
-            MAP_SIZE = Math.max(MAP_SIZE, oldSize + expandAmount);
-            for (let y = oldSize; y < MAP_SIZE; y++) {
+        else if (direction === 'down') {
+            // Expand map downward
+            const newSize = MAP_SIZE + expandAmount;
+            for (let y = oldSize; y < newSize; y++) {
                 map[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     map[y][x] = 1;
                 }
             }
+            MAP_SIZE = newSize;
+            carvePassages(1, oldSize - 3, MAP_SIZE - 1, newSize - 1);
         }
-        if (playerX < 5) {
-            // Expand left - shift everything right
-            shiftX = expandAmount;
-            MAP_SIZE += expandAmount;
+        else if (direction === 'left') {
+            // Shift everything right and add new area on left
             const newMap = [];
+            MAP_SIZE += expandAmount;
             for (let y = 0; y < MAP_SIZE; y++) {
                 newMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     if (x < expandAmount) {
                         newMap[y][x] = 1;
                     } else {
-                        newMap[y][x] = map[y] ? (map[y][x - expandAmount] || 1) : 1;
+                        newMap[y][x] = (map[y] && map[y][x - expandAmount] !== undefined) ? map[y][x - expandAmount] : 1;
                     }
                 }
             }
             map = newMap;
-            player.x += expandAmount * TILE_SIZE;
-            petState.x += expandAmount * TILE_SIZE;
-            enemies.forEach(e => e.x += expandAmount * TILE_SIZE);
-            resources.forEach(r => r.x += expandAmount * TILE_SIZE);
-            paintings.forEach(p => { p.x += expandAmount * TILE_SIZE; p.mapX += expandAmount; });
+            
+            // Shift all entities
+            const shift = expandAmount * TILE_SIZE;
+            player.x += shift;
+            petState.x += shift;
+            petState.targetX += shift;
+            enemies.forEach(e => e.x += shift);
+            resources.forEach(r => r.x += shift);
+            paintings.forEach(p => { p.x += shift; p.mapX += expandAmount; });
+            
+            carvePassages(1, 1, expandAmount + 3, MAP_SIZE - 1);
         }
-        if (playerY < 5) {
-            // Expand up - shift everything down
-            shiftY = expandAmount;
-            MAP_SIZE = Math.max(MAP_SIZE, oldSize + expandAmount);
+        else if (direction === 'up') {
+            // Shift everything down and add new area on top
             const newMap = [];
+            MAP_SIZE += expandAmount;
             for (let y = 0; y < MAP_SIZE; y++) {
                 newMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     if (y < expandAmount) {
                         newMap[y][x] = 1;
                     } else {
-                        newMap[y][x] = map[y - expandAmount] ? (map[y - expandAmount][x] || 1) : 1;
+                        newMap[y][x] = (map[y - expandAmount] && map[y - expandAmount][x] !== undefined) ? map[y - expandAmount][x] : 1;
                     }
                 }
             }
             map = newMap;
-            player.y += expandAmount * TILE_SIZE;
-            petState.y += expandAmount * TILE_SIZE;
-            enemies.forEach(e => e.y += expandAmount * TILE_SIZE);
-            resources.forEach(r => r.y += expandAmount * TILE_SIZE);
-            paintings.forEach(p => { p.y += expandAmount * TILE_SIZE; p.mapY += expandAmount; });
+            
+            // Shift all entities
+            const shift = expandAmount * TILE_SIZE;
+            player.y += shift;
+            petState.y += shift;
+            petState.targetY += shift;
+            enemies.forEach(e => e.y += shift);
+            resources.forEach(r => r.y += shift);
+            paintings.forEach(p => { p.y += shift; p.mapY += expandAmount; });
+            
+            carvePassages(1, 1, MAP_SIZE - 1, expandAmount + 3);
         }
         
-        // Carve new passages in expanded area using random walk
-        const newPlayerX = Math.floor(player.x / TILE_SIZE);
-        const newPlayerY = Math.floor(player.y / TILE_SIZE);
-        
-        for (let i = 0; i < 50; i++) {
-            let cx = newPlayerX + Math.floor(Math.random() * 20) - 10;
-            let cy = newPlayerY + Math.floor(Math.random() * 20) - 10;
+        // Add new paintings
+        addNewPaintings(5);
+    }
+    
+    function carvePassages(x1, y1, x2, y2) {
+        // Create random passages in the specified area
+        const numPaths = 30;
+        for (let p = 0; p < numPaths; p++) {
+            let cx = x1 + Math.floor(Math.random() * (x2 - x1));
+            let cy = y1 + Math.floor(Math.random() * (y2 - y1));
             
-            for (let j = 0; j < 15; j++) {
+            // Random walk to carve passage
+            for (let step = 0; step < 20; step++) {
                 if (cx > 0 && cx < MAP_SIZE - 1 && cy > 0 && cy < MAP_SIZE - 1) {
                     map[cy][cx] = 0;
-                    const dir = Math.floor(Math.random() * 4);
-                    if (dir === 0) cx++;
-                    else if (dir === 1) cx--;
-                    else if (dir === 2) cy++;
-                    else cy--;
+                    // Also carve adjacent for wider passages
+                    if (Math.random() > 0.5 && cx + 1 < MAP_SIZE - 1) map[cy][cx + 1] = 0;
+                    if (Math.random() > 0.5 && cy + 1 < MAP_SIZE - 1) map[cy + 1][cx] = 0;
                 }
+                
+                const dir = Math.floor(Math.random() * 4);
+                if (dir === 0 && cx < x2) cx++;
+                else if (dir === 1 && cx > x1) cx--;
+                else if (dir === 2 && cy < y2) cy++;
+                else if (dir === 3 && cy > y1) cy--;
             }
         }
         
-        // Add new paintings in expanded area
+        // Ensure connection to old area
+        const midY = Math.floor((y1 + y2) / 2);
+        const midX = Math.floor((x1 + x2) / 2);
         for (let i = 0; i < 5; i++) {
+            if (midY + i < MAP_SIZE && midX < MAP_SIZE) map[midY + i][midX] = 0;
+            if (midY < MAP_SIZE && midX + i < MAP_SIZE) map[midY][midX + i] = 0;
+        }
+    }
+    
+    function addNewPaintings(count) {
+        for (let i = 0; i < count; i++) {
             const x = Math.floor(Math.random() * MAP_SIZE);
             const y = Math.floor(Math.random() * MAP_SIZE);
             if (map[y] && map[y][x] === 1) {
-                const paintingData = FAMOUS_PAINTINGS[Math.floor(Math.random() * FAMOUS_PAINTINGS.length)];
-                paintings.push({
-                    x: x * TILE_SIZE + TILE_SIZE / 2,
-                    y: y * TILE_SIZE + TILE_SIZE / 2,
-                    mapX: x,
-                    mapY: y,
-                    eyeOffset: 0,
-                    blinkTimer: Math.random() * 100,
-                    ...paintingData
-                });
+                // Check if there's a floor nearby (valid wall for painting)
+                let hasFloor = false;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (map[y + dy] && map[y + dy][x + dx] === 0) hasFloor = true;
+                    }
+                }
+                if (hasFloor) {
+                    const paintingData = FAMOUS_PAINTINGS[Math.floor(Math.random() * FAMOUS_PAINTINGS.length)];
+                    paintings.push({
+                        x: x * TILE_SIZE + TILE_SIZE / 2,
+                        y: y * TILE_SIZE + TILE_SIZE / 2,
+                        mapX: x,
+                        mapY: y,
+                        eyeOffset: 0,
+                        blinkTimer: Math.random() * 100,
+                        ...paintingData
+                    });
+                }
             }
         }
     }
@@ -1665,13 +1702,20 @@
         // ENDLESS MAZE: Expand map as player approaches edges
         const playerMapX = Math.floor(player.x / TILE_SIZE);
         const playerMapY = Math.floor(player.y / TILE_SIZE);
-        const expandThreshold = 5;
+        const expandThreshold = 8;
         
-        if (playerMapX > MAP_SIZE - expandThreshold || 
-            playerMapY > MAP_SIZE - expandThreshold ||
-            playerMapX < expandThreshold || 
-            playerMapY < expandThreshold) {
-            expandMaze(playerMapX, playerMapY);
+        // Check all directions and expand as needed
+        if (playerMapX > MAP_SIZE - expandThreshold) {
+            expandMazeDirection('right');
+        }
+        if (playerMapY > MAP_SIZE - expandThreshold) {
+            expandMazeDirection('down');
+        }
+        if (playerMapX < expandThreshold && playerMapX > 2) {
+            expandMazeDirection('left');
+        }
+        if (playerMapY < expandThreshold && playerMapY > 2) {
+            expandMazeDirection('up');
         }
         
         // Update enemies
