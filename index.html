@@ -759,10 +759,12 @@
             if (Math.random() < 0.3) map[y][x] = 0;
         }
         
-        map[1][1] = 0;
-        map[1][2] = 0;
-        map[2][1] = 0;
-        map[2][2] = 0;
+        // Ensure spawn area is clear (larger 3x3 area)
+        for (let sy = 1; sy <= 3; sy++) {
+            for (let sx = 1; sx <= 3; sx++) {
+                map[sy][sx] = 0;
+            }
+        }
     }
     
     // ============================================
@@ -1194,15 +1196,29 @@
             dy += Math.sin(player.angle + Math.PI/2) * touch.moveX * moveSpeed;
         }
         
-        // Collision detection
+        // Collision detection - check multiple points around the player
         const newX = player.x + dx;
         const newY = player.y + dy;
-        const margin = 10;
+        const radius = 12; // Player collision radius
         
-        if (!isWall(newX + margin, player.y) && !isWall(newX - margin, player.y)) {
+        // Check if new position would collide
+        function canMoveTo(x, y) {
+            // Check 8 points around the player (circle collision)
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+                const checkX = x + Math.cos(angle) * radius;
+                const checkY = y + Math.sin(angle) * radius;
+                if (isWall(checkX, checkY)) return false;
+            }
+            // Also check center
+            if (isWall(x, y)) return false;
+            return true;
+        }
+        
+        // Try to move on each axis separately (allows sliding along walls)
+        if (canMoveTo(newX, player.y)) {
             player.x = newX;
         }
-        if (!isWall(player.x, newY + margin) && !isWall(player.x, newY - margin)) {
+        if (canMoveTo(player.x, newY)) {
             player.y = newY;
         }
         
