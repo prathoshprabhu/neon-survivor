@@ -1811,9 +1811,9 @@
             const distance = 800 + Math.random() * 300;
             
             const types = [
-                { name: 'Drone', size: 15, health: 30, speed: 3, damage: 5, color: '#ff00aa', score: 10 },
-                { name: 'Sentinel', size: 25, health: 80, speed: 2, damage: 10, color: '#9d00ff', score: 25 },
-                { name: 'Goliath', size: 40, health: 200, speed: 1.2, damage: 20, color: '#00f7ff', score: 50 },
+                { name: 'Drone', size: 18, health: 30, speed: 3, damage: 5, color: '#ff3333', score: 10, type: 'small' },
+                { name: 'Sentinel', size: 28, health: 80, speed: 2, damage: 10, color: '#ff8800', score: 25, type: 'medium' },
+                { name: 'Goliath', size: 45, health: 200, speed: 1.2, damage: 20, color: '#1a1a1a', score: 50, type: 'boss' },
             ];
             
             const typeIndex = Math.min(Math.floor(Math.random() * (1 + wave * 0.3)), types.length - 1);
@@ -2025,7 +2025,8 @@
         // RENDERING
         // ============================================
         function render() {
-            ctx.fillStyle = '#0a0a12';
+            // Clear with dark battlefield color
+            ctx.fillStyle = '#0a0806';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Background grid
@@ -2064,10 +2065,72 @@
         }
 
         function renderGrid() {
-            ctx.strokeStyle = 'rgba(157, 0, 255, 0.1)';
+            // Battlefield background
+            const gradient = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, 0,
+                canvas.width / 2, canvas.height / 2, canvas.width
+            );
+            gradient.addColorStop(0, '#1a1510');
+            gradient.addColorStop(0.5, '#0d0a08');
+            gradient.addColorStop(1, '#050403');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Battlefield debris and craters
+            ctx.save();
+            
+            // Draw scattered debris
+            const debrisCount = 30;
+            for (let i = 0; i < debrisCount; i++) {
+                const seed = i * 12345.6789;
+                const debrisX = ((seed * 7) % 2000) - camera.x % 2000;
+                const debrisY = ((seed * 11) % 2000) - camera.y % 2000;
+                
+                // Craters
+                ctx.fillStyle = 'rgba(20, 15, 10, 0.6)';
+                ctx.beginPath();
+                ctx.ellipse(debrisX, debrisY, 30 + (i % 20), 20 + (i % 15), 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Crater rim
+                ctx.strokeStyle = 'rgba(60, 45, 30, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            // Smoke/dust particles in background
+            for (let i = 0; i < 15; i++) {
+                const seed = i * 9876.54321;
+                const smokeX = ((seed * 13) % 1800) - camera.x % 1800;
+                const smokeY = ((seed * 17) % 1200) - camera.y % 1200;
+                
+                const smokeGradient = ctx.createRadialGradient(smokeX, smokeY, 0, smokeX, smokeY, 80);
+                smokeGradient.addColorStop(0, 'rgba(80, 60, 40, 0.15)');
+                smokeGradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = smokeGradient;
+                ctx.beginPath();
+                ctx.arc(smokeX, smokeY, 80, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Battle scars / trenches
+            ctx.strokeStyle = 'rgba(40, 30, 20, 0.4)';
+            ctx.lineWidth = 8;
+            for (let i = 0; i < 8; i++) {
+                const seed = i * 5432.1;
+                const startX = ((seed * 19) % 2500) - camera.x % 2500;
+                const startY = ((seed * 23) % 1500) - camera.y % 1500;
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(startX + 100 + (i * 30), startY + 50 - (i * 10));
+                ctx.stroke();
+            }
+            
+            // Faint grid overlay for tech feel
+            ctx.strokeStyle = 'rgba(255, 100, 50, 0.03)';
             ctx.lineWidth = 1;
             
-            const gridSize = 50;
+            const gridSize = 80;
             const offsetX = -camera.x % gridSize;
             const offsetY = -camera.y % gridSize;
             
@@ -2084,6 +2147,8 @@
                 ctx.lineTo(canvas.width, y);
                 ctx.stroke();
             }
+            
+            ctx.restore();
         }
 
         function renderPlayer() {
@@ -2110,43 +2175,81 @@
             ctx.arc(0, 0, CONFIG.PLAYER_SIZE * 2, 0, Math.PI * 2);
             ctx.fill();
             
-            // Player body
-            ctx.fillStyle = cosmetic.color;
             ctx.shadowColor = cosmetic.color;
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 15;
             
-            // Hexagon shape
+            const s = CONFIG.PLAYER_SIZE;
+            
+            // Robot body (torso)
+            ctx.fillStyle = '#2a2a35';
+            ctx.strokeStyle = cosmetic.color;
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const angle = (i * Math.PI * 2) / 6 - Math.PI / 6;
-                const x = Math.cos(angle) * CONFIG.PLAYER_SIZE;
-                const y = Math.sin(angle) * CONFIG.PLAYER_SIZE;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
+            ctx.roundRect(-s * 0.5, -s * 0.4, s, s * 0.8, 4);
             ctx.fill();
+            ctx.stroke();
             
-            // Inner detail
-            ctx.fillStyle = '#0a0a12';
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const angle = (i * Math.PI * 2) / 6 - Math.PI / 6;
-                const x = Math.cos(angle) * (CONFIG.PLAYER_SIZE * 0.6);
-                const y = Math.sin(angle) * (CONFIG.PLAYER_SIZE * 0.6);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.fill();
-            
-            // Weapon indicator
+            // Chest core (glowing)
             ctx.fillStyle = cosmetic.color;
             ctx.beginPath();
-            ctx.moveTo(CONFIG.PLAYER_SIZE, 0);
-            ctx.lineTo(CONFIG.PLAYER_SIZE + 15, -5);
-            ctx.lineTo(CONFIG.PLAYER_SIZE + 15, 5);
-            ctx.closePath();
+            ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Head
+            ctx.fillStyle = '#3a3a45';
+            ctx.beginPath();
+            ctx.roundRect(-s * 0.25, -s * 0.75, s * 0.5, s * 0.35, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Visor (glowing eyes)
+            ctx.fillStyle = cosmetic.color;
+            ctx.beginPath();
+            ctx.roundRect(-s * 0.2, -s * 0.65, s * 0.4, s * 0.12, 2);
+            ctx.fill();
+            
+            // Arms
+            ctx.fillStyle = '#2a2a35';
+            // Left arm
+            ctx.beginPath();
+            ctx.roundRect(-s * 0.75, -s * 0.3, s * 0.2, s * 0.6, 3);
+            ctx.fill();
+            ctx.stroke();
+            // Right arm (gun arm)
+            ctx.beginPath();
+            ctx.roundRect(s * 0.55, -s * 0.3, s * 0.2, s * 0.6, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Legs
+            // Left leg
+            ctx.beginPath();
+            ctx.roundRect(-s * 0.35, s * 0.4, s * 0.25, s * 0.5, 3);
+            ctx.fill();
+            ctx.stroke();
+            // Right leg
+            ctx.beginPath();
+            ctx.roundRect(s * 0.1, s * 0.4, s * 0.25, s * 0.5, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Weapon (extending from right arm)
+            ctx.fillStyle = '#4a4a55';
+            ctx.beginPath();
+            ctx.roundRect(s * 0.75, -s * 0.1, s * 0.6, s * 0.2, 2);
+            ctx.fill();
+            ctx.fillStyle = cosmetic.color;
+            ctx.beginPath();
+            ctx.arc(s * 1.3, 0, s * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Shoulder pads
+            ctx.fillStyle = cosmetic.color + '80';
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.55, -s * 0.35, s * 0.15, s * 0.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.55, -s * 0.35, s * 0.15, s * 0.1, 0, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.restore();
@@ -2160,42 +2263,191 @@
             if (screenX < -100 || screenX > canvas.width + 100 ||
                 screenY < -100 || screenY > canvas.height + 100) return;
             
+            // Calculate angle to player
+            const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+            
             ctx.save();
             ctx.translate(screenX, screenY);
+            ctx.rotate(angleToPlayer);
             
-            // Glow
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, enemy.size * 1.5);
-            gradient.addColorStop(0, enemy.color + '60');
-            gradient.addColorStop(1, 'transparent');
-            ctx.fillStyle = gradient;
+            const s = enemy.size;
+            const isBoss = enemy.color === '#1a1a1a';
+            const isMedium = enemy.color === '#ff8800';
+            
+            // Glow effect (red/orange for regular, dark aura for boss)
+            if (isBoss) {
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2);
+                gradient.addColorStop(0, 'rgba(100, 0, 0, 0.4)');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.5);
+                gradient.addColorStop(0, enemy.color + '40');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.shadowColor = isBoss ? '#ff0000' : enemy.color;
+            ctx.shadowBlur = isBoss ? 25 : 12;
+            
+            // Robot body colors
+            const bodyColor = isBoss ? '#1a1a1a' : (isMedium ? '#4a3520' : '#4a2020');
+            const accentColor = isBoss ? '#660000' : enemy.color;
+            const eyeColor = isBoss ? '#ff0000' : (isMedium ? '#ffaa00' : '#ff4444');
+            
+            // Robot torso
+            ctx.fillStyle = bodyColor;
+            ctx.strokeStyle = accentColor;
+            ctx.lineWidth = isBoss ? 3 : 2;
             ctx.beginPath();
-            ctx.arc(0, 0, enemy.size * 1.5, 0, Math.PI * 2);
+            ctx.roundRect(-s * 0.45, -s * 0.35, s * 0.9, s * 0.7, 4);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Chest detail
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            if (isBoss) {
+                // Boss has skull-like chest emblem
+                ctx.arc(0, -s * 0.05, s * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(-s * 0.06, -s * 0.08, s * 0.04, 0, Math.PI * 2);
+                ctx.arc(s * 0.06, -s * 0.08, s * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.arc(0, 0, s * 0.12, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Head
+            ctx.fillStyle = bodyColor;
+            ctx.beginPath();
+            if (isBoss) {
+                // Boss has angular menacing head
+                ctx.moveTo(-s * 0.3, -s * 0.4);
+                ctx.lineTo(-s * 0.35, -s * 0.7);
+                ctx.lineTo(0, -s * 0.8);
+                ctx.lineTo(s * 0.35, -s * 0.7);
+                ctx.lineTo(s * 0.3, -s * 0.4);
+                ctx.closePath();
+            } else {
+                ctx.roundRect(-s * 0.22, -s * 0.65, s * 0.44, s * 0.3, 3);
+            }
+            ctx.fill();
+            ctx.stroke();
+            
+            // Eyes (glowing visor)
+            ctx.fillStyle = eyeColor;
+            ctx.shadowColor = eyeColor;
+            ctx.shadowBlur = 10;
+            if (isBoss) {
+                // Boss has V-shaped angry eyes
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.25, -s * 0.55);
+                ctx.lineTo(-s * 0.08, -s * 0.5);
+                ctx.lineTo(-s * 0.08, -s * 0.58);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.25, -s * 0.55);
+                ctx.lineTo(s * 0.08, -s * 0.5);
+                ctx.lineTo(s * 0.08, -s * 0.58);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.roundRect(-s * 0.18, -s * 0.58, s * 0.36, s * 0.1, 2);
+                ctx.fill();
+            }
+            
+            ctx.shadowBlur = 0;
+            
+            // Arms
+            ctx.fillStyle = bodyColor;
+            ctx.beginPath();
+            ctx.roundRect(-s * 0.65, -s * 0.25, s * 0.18, s * 0.5, 3);
+            ctx.fill();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.roundRect(s * 0.47, -s * 0.25, s * 0.18, s * 0.5, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Weapon arm extension
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.roundRect(s * 0.65, -s * 0.08, s * 0.4, s * 0.16, 2);
+            ctx.fill();
+            ctx.fillStyle = eyeColor;
+            ctx.beginPath();
+            ctx.arc(s * 1.0, 0, s * 0.06, 0, Math.PI * 2);
             ctx.fill();
             
-            // Body
-            ctx.fillStyle = enemy.color;
-            ctx.shadowColor = enemy.color;
-            ctx.shadowBlur = 15;
+            // Legs
+            ctx.fillStyle = bodyColor;
             ctx.beginPath();
-            ctx.arc(0, 0, enemy.size, 0, Math.PI * 2);
+            ctx.roundRect(-s * 0.32, s * 0.35, s * 0.22, s * 0.45, 3);
             ctx.fill();
-            
-            // Inner core
-            ctx.fillStyle = '#0a0a12';
+            ctx.stroke();
             ctx.beginPath();
-            ctx.arc(0, 0, enemy.size * 0.5, 0, Math.PI * 2);
+            ctx.roundRect(s * 0.1, s * 0.35, s * 0.22, s * 0.45, 3);
             ctx.fill();
+            ctx.stroke();
             
-            // Health bar
+            // Shoulder armor
+            ctx.fillStyle = accentColor;
+            if (isBoss) {
+                // Boss has spiky shoulders
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.55, -s * 0.35);
+                ctx.lineTo(-s * 0.75, -s * 0.5);
+                ctx.lineTo(-s * 0.55, -s * 0.2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.55, -s * 0.35);
+                ctx.lineTo(s * 0.75, -s * 0.5);
+                ctx.lineTo(s * 0.55, -s * 0.2);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.ellipse(-s * 0.5, -s * 0.28, s * 0.12, s * 0.08, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(s * 0.5, -s * 0.28, s * 0.12, s * 0.08, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+            
+            // Health bar (not rotated)
+            ctx.save();
+            ctx.translate(screenX, screenY);
             const barWidth = enemy.size * 2;
-            const barHeight = 4;
+            const barHeight = 5;
             const healthPercent = enemy.health / enemy.maxHealth;
             
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(-barWidth/2, -enemy.size - 15, barWidth, barHeight);
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.beginPath();
+            ctx.roundRect(-barWidth/2, -enemy.size - 20, barWidth, barHeight, 2);
+            ctx.fill();
             
-            ctx.fillStyle = healthPercent > 0.5 ? '#00ff6a' : healthPercent > 0.25 ? '#f7ff00' : '#ff0044';
-            ctx.fillRect(-barWidth/2, -enemy.size - 15, barWidth * healthPercent, barHeight);
+            const healthColor = healthPercent > 0.5 ? '#00ff6a' : healthPercent > 0.25 ? '#f7ff00' : '#ff0044';
+            ctx.fillStyle = healthColor;
+            ctx.shadowColor = healthColor;
+            ctx.shadowBlur = 5;
+            ctx.beginPath();
+            ctx.roundRect(-barWidth/2, -enemy.size - 20, barWidth * healthPercent, barHeight, 2);
+            ctx.fill();
             
             ctx.restore();
         }
@@ -2330,45 +2582,59 @@
             ctx.save();
             ctx.translate(screenX, screenY);
             ctx.rotate(clonePet.angle);
-            ctx.globalAlpha = 0.7;
+            ctx.globalAlpha = 0.8;
+            
+            const s = 15;
+            const color = '#00f7ff';
             
             // Glow
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 30);
-            gradient.addColorStop(0, '#00f7ff40');
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2);
+            gradient.addColorStop(0, color + '40');
             gradient.addColorStop(1, 'transparent');
             ctx.fillStyle = gradient;
             ctx.beginPath();
-            ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            ctx.arc(0, 0, s * 2, 0, Math.PI * 2);
             ctx.fill();
             
-            // Body
-            ctx.fillStyle = '#00f7ff';
-            ctx.shadowColor = '#00f7ff';
-            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            
+            // Mini robot body
+            ctx.fillStyle = '#2a2a35';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const angle = (i * Math.PI * 2) / 6 - Math.PI / 6;
-                const x = Math.cos(angle) * 18;
-                const y = Math.sin(angle) * 18;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
+            ctx.roundRect(-s * 0.4, -s * 0.3, s * 0.8, s * 0.6, 3);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Core
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.15, 0, Math.PI * 2);
             ctx.fill();
             
-            // Inner
-            ctx.fillStyle = '#0a0a12';
+            // Head
+            ctx.fillStyle = '#3a3a45';
             ctx.beginPath();
-            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.roundRect(-s * 0.2, -s * 0.55, s * 0.4, s * 0.25, 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Visor
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.roundRect(-s * 0.15, -s * 0.48, s * 0.3, s * 0.08, 1);
             ctx.fill();
             
             // Gun
-            ctx.fillStyle = '#00f7ff';
+            ctx.fillStyle = '#4a4a55';
             ctx.beginPath();
-            ctx.moveTo(18, 0);
-            ctx.lineTo(28, -3);
-            ctx.lineTo(28, 3);
-            ctx.closePath();
+            ctx.roundRect(s * 0.4, -s * 0.08, s * 0.5, s * 0.16, 2);
+            ctx.fill();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(s * 0.85, 0, s * 0.06, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.restore();
