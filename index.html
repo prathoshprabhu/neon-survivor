@@ -635,6 +635,39 @@
     let mapOffsetX = 0; // For infinite maze
     let mapOffsetY = 0;
     
+    // Biome system
+    const BIOMES = {
+        normal: { 
+            wallColor: [150, 30, 30], 
+            floorColor: [30, 10, 10], 
+            skyColor: '#000000',
+            fogColor: 'rgba(50, 0, 0, 0.3)',
+            name: 'Blood Maze'
+        },
+        grassy: { 
+            wallColor: [40, 100, 40], 
+            floorColor: [20, 50, 20], 
+            skyColor: '#001a00',
+            fogColor: 'rgba(0, 50, 0, 0.2)',
+            name: 'Overgrown Ruins'
+        },
+        volcanic: { 
+            wallColor: [80, 30, 10], 
+            floorColor: [50, 20, 5], 
+            skyColor: '#1a0500',
+            fogColor: 'rgba(100, 30, 0, 0.3)',
+            name: 'Volcanic Depths'
+        },
+        icy: { 
+            wallColor: [60, 80, 120], 
+            floorColor: [30, 40, 60], 
+            skyColor: '#000a15',
+            fogColor: 'rgba(100, 150, 200, 0.2)',
+            name: 'Frozen Catacombs'
+        }
+    };
+    let biomeMap = []; // Stores biome type for each tile
+    
     const WEAPONS = [
         { id: 0, name: 'Revolver', icon: '🔫', damage: 25, fireRate: 400, ammo: 1, range: 15, unlocked: true },
         { id: 1, name: 'Knife', icon: '🔪', damage: 50, fireRate: 200, ammo: 0, range: 1.5, unlocked: false, melee: true },
@@ -968,19 +1001,65 @@
     let lastRegen = 0;
     
     // ============================================
-    // MAZE GENERATION
+    // MAZE GENERATION WITH BIOMES
     // ============================================
     function generateMaze() {
         map = [];
+        biomeMap = [];
+        
+        // Initialize with walls
         for (let y = 0; y < MAP_SIZE; y++) {
             map[y] = [];
+            biomeMap[y] = [];
             for (let x = 0; x < MAP_SIZE; x++) {
                 map[y][x] = 1;
+                biomeMap[y][x] = 'normal';
+            }
+        }
+        
+        // Generate biome regions using Voronoi-like approach
+        const biomeTypes = ['normal', 'grassy', 'volcanic', 'icy'];
+        const biomeSeeds = [];
+        const numBiomes = 8;
+        
+        for (let i = 0; i < numBiomes; i++) {
+            biomeSeeds.push({
+                x: 2 + Math.floor(Math.random() * (MAP_SIZE - 4)),
+                y: 2 + Math.floor(Math.random() * (MAP_SIZE - 4)),
+                type: biomeTypes[Math.floor(Math.random() * biomeTypes.length)]
+            });
+        }
+        // Ensure starting area is normal
+        biomeSeeds[0] = { x: 2, y: 2, type: 'normal' };
+        
+        // Assign biomes based on nearest seed
+        for (let y = 0; y < MAP_SIZE; y++) {
+            for (let x = 0; x < MAP_SIZE; x++) {
+                let minDist = Infinity;
+                let nearestBiome = 'normal';
+                for (const seed of biomeSeeds) {
+                    const dist = Math.sqrt((x - seed.x) ** 2 + (y - seed.y) ** 2);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearestBiome = seed.type;
+                    }
+                }
+                biomeMap[y][x] = nearestBiome;
+            }
+        }
+        
+        // Generate PROPER maze using recursive backtracker
+        const visited = [];
+        for (let y = 0; y < MAP_SIZE; y++) {
+            visited[y] = [];
+            for (let x = 0; x < MAP_SIZE; x++) {
+                visited[y][x] = false;
             }
         }
         
         const stack = [];
         const startX = 1, startY = 1;
+        visited[startY][startX] = true;
         map[startY][startX] = 0;
         stack.push({ x: startX, y: startY });
         
@@ -988,6 +1067,7 @@
             const current = stack[stack.length - 1];
             const neighbors = [];
             
+            // Check all 4 directions (2 cells away for maze walls)
             const dirs = [
                 { dx: 0, dy: -2 },
                 { dx: 2, dy: 0 },
@@ -998,31 +1078,59 @@
             for (const dir of dirs) {
                 const nx = current.x + dir.dx;
                 const ny = current.y + dir.dy;
-                if (nx > 0 && nx < MAP_SIZE - 1 && ny > 0 && ny < MAP_SIZE - 1 && map[ny][nx] === 1) {
+                if (nx > 0 && nx < MAP_SIZE - 1 && ny > 0 && ny < MAP_SIZE - 1 && !visited[ny][nx]) {
                     neighbors.push({ x: nx, y: ny, wx: current.x + dir.dx / 2, wy: current.y + dir.dy / 2 });
                 }
             }
             
             if (neighbors.length > 0) {
+                // Choose random neighbor
                 const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                
+                // Remove wall between current and next
                 map[next.wy][next.wx] = 0;
                 map[next.y][next.x] = 0;
+                visited[next.y][next.x] = true;
+                
                 stack.push({ x: next.x, y: next.y });
             } else {
                 stack.pop();
             }
         }
         
-        for (let i = 0; i < MAP_SIZE * 2; i++) {
-            const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
-            const y = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
-            if (Math.random() < 0.3) map[y][x] = 0;
+        // Add some extra passages to make navigation easier (15% of walls removed)
+        for (let y = 2; y < MAP_SIZE - 2; y++) {
+            for (let x = 2; x < MAP_SIZE - 2; x++) {
+                if (map[y][x] === 1 && Math.random() < 0.08) {
+                    // Check if removing this wall creates a shortcut (has floor neighbors)
+                    let floorNeighbors = 0;
+                    if (map[y-1][x] === 0) floorNeighbors++;
+                    if (map[y+1][x] === 0) floorNeighbors++;
+                    if (map[y][x-1] === 0) floorNeighbors++;
+                    if (map[y][x+1] === 0) floorNeighbors++;
+                    
+                    if (floorNeighbors >= 2) {
+                        map[y][x] = 0;
+                    }
+                }
+            }
         }
         
-        // Ensure spawn area is clear (larger 3x3 area)
-        for (let sy = 1; sy <= 3; sy++) {
-            for (let sx = 1; sx <= 3; sx++) {
-                map[sy][sx] = 0;
+        // Create wider corridors in some areas for easier navigation
+        for (let y = 2; y < MAP_SIZE - 2; y += 4) {
+            for (let x = 2; x < MAP_SIZE - 2; x += 4) {
+                if (map[y][x] === 0 && Math.random() < 0.4) {
+                    // Widen this corridor
+                    if (map[y][x+1] !== undefined) map[y][x+1] = 0;
+                    if (map[y+1] && map[y+1][x] !== undefined) map[y+1][x] = 0;
+                }
+            }
+        }
+        
+        // Ensure spawn area is clear (4x4 area)
+        for (let sy = 1; sy <= 4; sy++) {
+            for (let sx = 1; sx <= 4; sx++) {
+                if (map[sy]) map[sy][sx] = 0;
             }
         }
     }
@@ -1031,13 +1139,19 @@
         const expandAmount = 12;
         const oldSize = MAP_SIZE;
         
+        // Assign biomes to new area
+        const biomeTypes = ['normal', 'grassy', 'volcanic', 'icy'];
+        const newBiome = biomeTypes[Math.floor(Math.random() * biomeTypes.length)];
+        
         if (direction === 'right') {
             // Expand map to the right
             const newSize = MAP_SIZE + expandAmount;
             for (let y = 0; y < newSize; y++) {
                 if (!map[y]) map[y] = [];
+                if (!biomeMap[y]) biomeMap[y] = [];
                 for (let x = oldSize; x < newSize; x++) {
                     map[y][x] = 1;
+                    biomeMap[y][x] = newBiome;
                 }
             }
             MAP_SIZE = newSize;
@@ -1046,10 +1160,13 @@
         else if (direction === 'down') {
             // Expand map downward
             const newSize = MAP_SIZE + expandAmount;
+            const downBiome = biomeTypes[Math.floor(Math.random() * biomeTypes.length)];
             for (let y = oldSize; y < newSize; y++) {
                 map[y] = [];
+                biomeMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     map[y][x] = 1;
+                    biomeMap[y][x] = downBiome;
                 }
             }
             MAP_SIZE = newSize;
@@ -1058,18 +1175,24 @@
         else if (direction === 'left') {
             // Shift everything right and add new area on left
             const newMap = [];
+            const newBiomeMap = [];
+            const leftBiome = biomeTypes[Math.floor(Math.random() * biomeTypes.length)];
             MAP_SIZE += expandAmount;
             for (let y = 0; y < MAP_SIZE; y++) {
                 newMap[y] = [];
+                newBiomeMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     if (x < expandAmount) {
                         newMap[y][x] = 1;
+                        newBiomeMap[y][x] = leftBiome;
                     } else {
                         newMap[y][x] = (map[y] && map[y][x - expandAmount] !== undefined) ? map[y][x - expandAmount] : 1;
+                        newBiomeMap[y][x] = (biomeMap[y] && biomeMap[y][x - expandAmount]) || 'normal';
                     }
                 }
             }
             map = newMap;
+            biomeMap = newBiomeMap;
             
             // Shift all entities
             const shift = expandAmount * TILE_SIZE;
@@ -1085,18 +1208,24 @@
         else if (direction === 'up') {
             // Shift everything down and add new area on top
             const newMap = [];
+            const newBiomeMap = [];
+            const upBiome = biomeTypes[Math.floor(Math.random() * biomeTypes.length)];
             MAP_SIZE += expandAmount;
             for (let y = 0; y < MAP_SIZE; y++) {
                 newMap[y] = [];
+                newBiomeMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     if (y < expandAmount) {
                         newMap[y][x] = 1;
+                        newBiomeMap[y][x] = upBiome;
                     } else {
                         newMap[y][x] = (map[y - expandAmount] && map[y - expandAmount][x] !== undefined) ? map[y - expandAmount][x] : 1;
+                        newBiomeMap[y][x] = (biomeMap[y - expandAmount] && biomeMap[y - expandAmount][x]) || 'normal';
                     }
                 }
             }
             map = newMap;
+            biomeMap = newBiomeMap;
             
             // Shift all entities
             const shift = expandAmount * TILE_SIZE;
@@ -1631,10 +1760,11 @@
     function update() {
         const now = Date.now();
         
-        // Player movement - FASTER speed
-        const baseSpeed = 4.5;
+        // Player movement - SMOOTH and FAST
+        const baseSpeed = 6;
         const speedMult = getPetBonus('speed');
-        const moveSpeed = (keys['shift'] ? 7 : baseSpeed) * speedMult;
+        const sprintMult = keys['shift'] ? 1.8 : 1;
+        const moveSpeed = baseSpeed * speedMult * sprintMult;
         let dx = 0, dy = 0;
         
         // Movement based on selected control scheme
@@ -2109,20 +2239,26 @@
     // RENDERING
     // ============================================
     function render() {
-        // Floor with depth gradient (darker in distance, lighter near player)
+        // Get current biome based on player position
+        const playerMapX = Math.floor(player.x / TILE_SIZE);
+        const playerMapY = Math.floor(player.y / TILE_SIZE);
+        const currentBiome = (biomeMap[playerMapY] && biomeMap[playerMapY][playerMapX]) || 'normal';
+        const biomeData = BIOMES[currentBiome];
+        const floorBase = biomeData.floorColor;
+        
+        // Floor with depth gradient based on biome
         const floorGrad = ctx.createLinearGradient(0, canvas.height / 2, 0, canvas.height);
-        floorGrad.addColorStop(0, '#050101'); // Dark at horizon (far)
-        floorGrad.addColorStop(0.3, '#0a0202');
-        floorGrad.addColorStop(0.6, '#120404');
-        floorGrad.addColorStop(1, '#1a0606'); // Lighter near player (close)
+        floorGrad.addColorStop(0, `rgb(${Math.floor(floorBase[0]*0.3)},${Math.floor(floorBase[1]*0.3)},${Math.floor(floorBase[2]*0.3)})`);
+        floorGrad.addColorStop(0.4, `rgb(${Math.floor(floorBase[0]*0.5)},${Math.floor(floorBase[1]*0.5)},${Math.floor(floorBase[2]*0.5)})`);
+        floorGrad.addColorStop(1, `rgb(${floorBase[0]},${floorBase[1]},${floorBase[2]})`);
         ctx.fillStyle = floorGrad;
         ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
         
-        // Ceiling with depth gradient (pure black with slight light near horizon)
+        // Ceiling/Sky based on biome
         const ceilGrad = ctx.createLinearGradient(0, 0, 0, canvas.height / 2);
-        ceilGrad.addColorStop(0, '#000000'); // Pure black at top
-        ceilGrad.addColorStop(0.8, '#000000');
-        ceilGrad.addColorStop(1, '#0a0202'); // Slightly lit near walls
+        ceilGrad.addColorStop(0, biomeData.skyColor);
+        ceilGrad.addColorStop(0.8, biomeData.skyColor);
+        ceilGrad.addColorStop(1, `rgb(${Math.floor(floorBase[0]*0.4)},${Math.floor(floorBase[1]*0.4)},${Math.floor(floorBase[2]*0.4)})`);
         ctx.fillStyle = ceilGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
         
@@ -2185,17 +2321,27 @@
             // Combined shade
             const finalShade = distShade * sideShade * edgeShade;
             
-            // RED wall color with 3D shading
-            const r = Math.floor(200 * finalShade + 15);
-            const g = Math.floor(20 * finalShade + 2);
-            const b = Math.floor(20 * finalShade + 2);
+            // Get biome for this wall tile
+            const biomeType = (biomeMap[rayResult.mapY] && biomeMap[rayResult.mapY][rayResult.mapX]) || 'normal';
+            const biome = BIOMES[biomeType];
+            const wallBaseColor = biome.wallColor;
+            
+            // Wall color with 3D shading based on biome
+            const r = Math.floor(wallBaseColor[0] * finalShade + 15);
+            const g = Math.floor(wallBaseColor[1] * finalShade + 5);
+            const b = Math.floor(wallBaseColor[2] * finalShade + 5);
             
             ctx.fillStyle = `rgb(${r},${g},${b})`;
             ctx.fillRect(i, wallTop, 1, wallHeight);
             
-            // Top edge highlight (light from above)
+            // Top edge highlight based on biome
             const highlightStrength = distShade * 0.4;
-            ctx.fillStyle = `rgba(255, 100, 80, ${highlightStrength})`;
+            let highlightColor;
+            if (biomeType === 'grassy') highlightColor = `rgba(100, 200, 100, ${highlightStrength})`;
+            else if (biomeType === 'volcanic') highlightColor = `rgba(255, 150, 50, ${highlightStrength})`;
+            else if (biomeType === 'icy') highlightColor = `rgba(150, 200, 255, ${highlightStrength})`;
+            else highlightColor = `rgba(255, 100, 80, ${highlightStrength})`;
+            ctx.fillStyle = highlightColor;
             ctx.fillRect(i, wallTop, 1, 3);
             
             // Bottom edge shadow (darker at floor)
@@ -2761,12 +2907,22 @@
                     const screenX = 75 + dx * tileSize;
                     const screenY = 75 + dy * tileSize;
                     
+                    // Get biome color
+                    const tileBiome = (biomeMap[mapY] && biomeMap[mapY][mapX]) || 'normal';
+                    const biomeColors = {
+                        normal: { wall: '#660000', floor: '#1a0505' },
+                        grassy: { wall: '#225522', floor: '#0a1a0a' },
+                        volcanic: { wall: '#662200', floor: '#1a0a00' },
+                        icy: { wall: '#334466', floor: '#0a1020' }
+                    };
+                    const colors = biomeColors[tileBiome];
+                    
                     if (map[mapY] && map[mapY][mapX] === 1) {
-                        miniCtx.fillStyle = '#660000';
+                        miniCtx.fillStyle = colors.wall;
                         miniCtx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
                     } else {
                         // Floor
-                        miniCtx.fillStyle = '#1a0505';
+                        miniCtx.fillStyle = colors.floor;
                         miniCtx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
                     }
                 }
