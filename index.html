@@ -128,6 +128,39 @@
         .kills-text { font-size: 14px; color: var(--neon-green); margin-top: 5px; }
         .coins-text { font-size: 14px; color: #ffd700; margin-top: 3px; }
         
+        #diamondHud {
+            top: 150px;
+            right: 20px;
+            text-align: center;
+            background: rgba(0,0,0,0.7);
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+        
+        .diamond-icon { font-size: 36px; animation: diamond-pulse 1.5s infinite; }
+        .diamond-count { font-size: 24px; color: #00ffff; text-shadow: 0 0 15px #00ffff; margin: 5px 0; }
+        .diamond-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 2px; }
+        
+        @keyframes diamond-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        #biomeHud {
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.5);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-size: 14px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
         #petHud {
             top: 150px;
             left: 20px;
@@ -516,8 +549,13 @@
     <canvas id="gameCanvas"></canvas>
     
     <div id="startScreen">
-        <h1 class="game-title">NEON SURVIVOR 3D</h1>
-        <p class="game-subtitle">YEAR 2087</p>
+        <h1 class="game-title">DIAMOND HUNTER</h1>
+        <p class="game-subtitle">SURVIVE THE WILDS</p>
+        
+        <div style="color: #00ffff; margin-bottom: 20px; font-size: 16px; text-shadow: 0 0 10px #00ffff;">
+            <p>💎 COLLECT 100 DIAMONDS TO WIN 💎</p>
+            <p style="font-size: 14px; color: #aaa;">Diamonds are found in CAVES - explore to find them!</p>
+        </div>
         
         <p style="color: var(--neon-cyan); margin-bottom: 15px; font-family: 'Orbitron', monospace;">Choose your controls:</p>
         <div style="display: flex; gap: 20px; margin-bottom: 30px;">
@@ -551,7 +589,8 @@
     </div>
     
     <div id="gameOverScreen">
-        <h1 class="game-title game-over-title">TERMINATED</h1>
+        <h1 class="game-title game-over-title" id="gameOverTitle">TERMINATED</h1>
+        <p class="final-score">💎 DIAMONDS: <span id="finalDiamonds">0</span>/100</p>
         <p class="final-score">SCORE: <span id="finalScore">0</span></p>
         <p class="coins-text">+<span id="coinsEarned">0</span> coins earned!</p>
         <button class="start-button" onclick="restartGame()">TRY AGAIN</button>
@@ -586,6 +625,16 @@
         <div class="score-value" id="scoreVal">0</div>
         <div class="kills-text">KILLS: <span id="killsVal">0</span></div>
         <div class="coins-text">💰 <span id="coinsVal">0</span></div>
+    </div>
+    
+    <div id="diamondHud" class="hud">
+        <div class="diamond-icon">💎</div>
+        <div class="diamond-count"><span id="diamondVal">0</span>/<span id="diamondGoal">100</span></div>
+        <div class="diamond-label">DIAMONDS</div>
+    </div>
+    
+    <div id="biomeHud" class="hud">
+        <span id="biomeName">Dark Forest</span>
     </div>
     
     <div id="weaponHud" class="hud"></div>
@@ -635,38 +684,70 @@
     let mapOffsetX = 0; // For infinite maze
     let mapOffsetY = 0;
     
-    // Biome system
+    // Biome system - Open World Survival
     const BIOMES = {
-        normal: { 
-            wallColor: [150, 30, 30], 
-            floorColor: [30, 10, 10], 
-            skyColor: '#000000',
-            fogColor: 'rgba(50, 0, 0, 0.3)',
-            name: 'Blood Maze'
+        forest: { 
+            wallColor: [30, 80, 30], 
+            floorColor: [20, 45, 15], 
+            skyColor: '#0a1a05',
+            name: 'Dark Forest',
+            monster: { name: 'Wendigo', color: '#3a2a1a', eyeColor: '#ffff00', health: 80, speed: 1.8, damage: 15 }
         },
-        grassy: { 
-            wallColor: [40, 100, 40], 
-            floorColor: [20, 50, 20], 
-            skyColor: '#001a00',
-            fogColor: 'rgba(0, 50, 0, 0.2)',
-            name: 'Overgrown Ruins'
+        blood: { 
+            wallColor: [120, 20, 20], 
+            floorColor: [40, 10, 10], 
+            skyColor: '#0a0000',
+            name: 'Bloodlands',
+            monster: { name: 'Vampire', color: '#2a0a0a', eyeColor: '#ff0000', health: 100, speed: 1.5, damage: 20 }
+        },
+        ice: { 
+            wallColor: [70, 90, 130], 
+            floorColor: [40, 50, 70], 
+            skyColor: '#051020',
+            name: 'Frozen Wastes',
+            monster: { name: 'Yeti', color: '#ddeeff', eyeColor: '#00aaff', health: 200, speed: 0.8, damage: 35 }
         },
         volcanic: { 
-            wallColor: [80, 30, 10], 
-            floorColor: [50, 20, 5], 
-            skyColor: '#1a0500',
-            fogColor: 'rgba(100, 30, 0, 0.3)',
-            name: 'Volcanic Depths'
+            wallColor: [90, 40, 10], 
+            floorColor: [50, 25, 8], 
+            skyColor: '#150500',
+            name: 'Volcanic Hell',
+            monster: { name: 'Fire Demon', color: '#ff3300', eyeColor: '#ffff00', health: 150, speed: 1.2, damage: 25 }
         },
-        icy: { 
-            wallColor: [60, 80, 120], 
-            floorColor: [30, 40, 60], 
-            skyColor: '#000a15',
-            fogColor: 'rgba(100, 150, 200, 0.2)',
-            name: 'Frozen Catacombs'
+        barren: { 
+            wallColor: [70, 60, 50], 
+            floorColor: [35, 30, 25], 
+            skyColor: '#0a0805',
+            name: 'Barren Wasteland',
+            monster: { name: 'Dust Wraith', color: '#8a7a6a', eyeColor: '#ffaa00', health: 60, speed: 2.2, damage: 10 }
+        },
+        swamp: { 
+            wallColor: [40, 60, 30], 
+            floorColor: [25, 40, 20], 
+            skyColor: '#050a03',
+            name: 'Cursed Swamp',
+            monster: { name: 'Swamp Thing', color: '#2a4a2a', eyeColor: '#00ff00', health: 120, speed: 0.9, damage: 18 }
+        },
+        cave: { 
+            wallColor: [40, 35, 45], 
+            floorColor: [20, 18, 25], 
+            skyColor: '#000000',
+            name: 'Crystal Cave',
+            monster: { name: 'Cave Troll', color: '#4a4a5a', eyeColor: '#ff00ff', health: 250, speed: 0.6, damage: 40 },
+            hasDiamonds: true
+        },
+        desert: { 
+            wallColor: [120, 100, 60], 
+            floorColor: [80, 65, 40], 
+            skyColor: '#1a1508',
+            name: 'Scorching Desert',
+            monster: { name: 'Mummy', color: '#c0a080', eyeColor: '#00ffff', health: 90, speed: 1.0, damage: 12 }
         }
     };
     let biomeMap = []; // Stores biome type for each tile
+    let diamonds = []; // Diamond locations
+    let diamondsCollected = 0;
+    const DIAMONDS_TO_WIN = 100;
     
     const WEAPONS = [
         { id: 0, name: 'Revolver', icon: '🔫', damage: 25, fireRate: 400, ammo: 1, range: 15, unlocked: true },
@@ -1001,42 +1082,52 @@
     let lastRegen = 0;
     
     // ============================================
-    // MAZE GENERATION WITH BIOMES
+    // OPEN WORLD GENERATION WITH BIOMES & CAVES
     // ============================================
-    function generateMaze() {
+    function generateWorld() {
         map = [];
         biomeMap = [];
+        diamonds = [];
+        diamondsCollected = 0;
         
-        // Initialize with walls
+        // Initialize as open world (mostly floor with scattered obstacles)
         for (let y = 0; y < MAP_SIZE; y++) {
             map[y] = [];
             biomeMap[y] = [];
             for (let x = 0; x < MAP_SIZE; x++) {
-                map[y][x] = 1;
-                biomeMap[y][x] = 'normal';
+                map[y][x] = 0; // Open by default
+                biomeMap[y][x] = 'forest'; // Default biome
             }
         }
         
-        // Generate biome regions using Voronoi-like approach
-        const biomeTypes = ['normal', 'grassy', 'volcanic', 'icy'];
+        // Border walls
+        for (let i = 0; i < MAP_SIZE; i++) {
+            map[0][i] = 1;
+            map[MAP_SIZE-1][i] = 1;
+            map[i][0] = 1;
+            map[i][MAP_SIZE-1] = 1;
+        }
+        
+        // Generate biome regions using Voronoi
+        const biomeTypes = ['forest', 'blood', 'ice', 'volcanic', 'barren', 'swamp', 'desert'];
         const biomeSeeds = [];
-        const numBiomes = 8;
+        const numBiomes = 12;
         
         for (let i = 0; i < numBiomes; i++) {
             biomeSeeds.push({
-                x: 2 + Math.floor(Math.random() * (MAP_SIZE - 4)),
-                y: 2 + Math.floor(Math.random() * (MAP_SIZE - 4)),
+                x: 3 + Math.floor(Math.random() * (MAP_SIZE - 6)),
+                y: 3 + Math.floor(Math.random() * (MAP_SIZE - 6)),
                 type: biomeTypes[Math.floor(Math.random() * biomeTypes.length)]
             });
         }
-        // Ensure starting area is normal
-        biomeSeeds[0] = { x: 2, y: 2, type: 'normal' };
+        // Starting area is forest
+        biomeSeeds[0] = { x: MAP_SIZE/2, y: MAP_SIZE/2, type: 'forest' };
         
         // Assign biomes based on nearest seed
         for (let y = 0; y < MAP_SIZE; y++) {
             for (let x = 0; x < MAP_SIZE; x++) {
                 let minDist = Infinity;
-                let nearestBiome = 'normal';
+                let nearestBiome = 'forest';
                 for (const seed of biomeSeeds) {
                     const dist = Math.sqrt((x - seed.x) ** 2 + (y - seed.y) ** 2);
                     if (dist < minDist) {
@@ -1048,91 +1139,82 @@
             }
         }
         
-        // Generate PROPER maze using recursive backtracker
-        const visited = [];
-        for (let y = 0; y < MAP_SIZE; y++) {
-            visited[y] = [];
-            for (let x = 0; x < MAP_SIZE; x++) {
-                visited[y][x] = false;
-            }
-        }
-        
-        const stack = [];
-        const startX = 1, startY = 1;
-        visited[startY][startX] = true;
-        map[startY][startX] = 0;
-        stack.push({ x: startX, y: startY });
-        
-        while (stack.length > 0) {
-            const current = stack[stack.length - 1];
-            const neighbors = [];
-            
-            // Check all 4 directions (2 cells away for maze walls)
-            const dirs = [
-                { dx: 0, dy: -2 },
-                { dx: 2, dy: 0 },
-                { dx: 0, dy: 2 },
-                { dx: -2, dy: 0 }
-            ];
-            
-            for (const dir of dirs) {
-                const nx = current.x + dir.dx;
-                const ny = current.y + dir.dy;
-                if (nx > 0 && nx < MAP_SIZE - 1 && ny > 0 && ny < MAP_SIZE - 1 && !visited[ny][nx]) {
-                    neighbors.push({ x: nx, y: ny, wx: current.x + dir.dx / 2, wy: current.y + dir.dy / 2 });
-                }
-            }
-            
-            if (neighbors.length > 0) {
-                // Choose random neighbor
-                const next = neighbors[Math.floor(Math.random() * neighbors.length)];
-                
-                // Remove wall between current and next
-                map[next.wy][next.wx] = 0;
-                map[next.y][next.x] = 0;
-                visited[next.y][next.x] = true;
-                
-                stack.push({ x: next.x, y: next.y });
-            } else {
-                stack.pop();
-            }
-        }
-        
-        // Add some extra passages to make navigation easier (15% of walls removed)
+        // Add scattered obstacles (trees, rocks, etc.) - not blocking paths
         for (let y = 2; y < MAP_SIZE - 2; y++) {
             for (let x = 2; x < MAP_SIZE - 2; x++) {
-                if (map[y][x] === 1 && Math.random() < 0.08) {
-                    // Check if removing this wall creates a shortcut (has floor neighbors)
-                    let floorNeighbors = 0;
-                    if (map[y-1][x] === 0) floorNeighbors++;
-                    if (map[y+1][x] === 0) floorNeighbors++;
-                    if (map[y][x-1] === 0) floorNeighbors++;
-                    if (map[y][x+1] === 0) floorNeighbors++;
-                    
-                    if (floorNeighbors >= 2) {
+                if (Math.random() < 0.08) {
+                    map[y][x] = 1; // Obstacle
+                }
+            }
+        }
+        
+        // Create CAVES (where diamonds are found!)
+        const numCaves = 5;
+        for (let c = 0; c < numCaves; c++) {
+            createCave(
+                5 + Math.floor(Math.random() * (MAP_SIZE - 10)),
+                5 + Math.floor(Math.random() * (MAP_SIZE - 10)),
+                4 + Math.floor(Math.random() * 4)
+            );
+        }
+        
+        // Clear spawn area
+        const spawnX = Math.floor(MAP_SIZE / 2);
+        const spawnY = Math.floor(MAP_SIZE / 2);
+        for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+                if (map[spawnY + dy]) {
+                    map[spawnY + dy][spawnX + dx] = 0;
+                    biomeMap[spawnY + dy][spawnX + dx] = 'forest';
+                }
+            }
+        }
+    }
+    
+    function createCave(cx, cy, size) {
+        // Create a cave entrance and interior
+        for (let dy = -size; dy <= size; dy++) {
+            for (let dx = -size; dx <= size; dx++) {
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const y = cy + dy;
+                const x = cx + dx;
+                
+                if (y > 0 && y < MAP_SIZE - 1 && x > 0 && x < MAP_SIZE - 1) {
+                    if (dist <= size) {
+                        // Cave interior
                         map[y][x] = 0;
+                        biomeMap[y][x] = 'cave';
+                    } else if (dist <= size + 1.5) {
+                        // Cave walls
+                        map[y][x] = 1;
+                        biomeMap[y][x] = 'cave';
                     }
                 }
             }
         }
         
-        // Create wider corridors in some areas for easier navigation
-        for (let y = 2; y < MAP_SIZE - 2; y += 4) {
-            for (let x = 2; x < MAP_SIZE - 2; x += 4) {
-                if (map[y][x] === 0 && Math.random() < 0.4) {
-                    // Widen this corridor
-                    if (map[y][x+1] !== undefined) map[y][x+1] = 0;
-                    if (map[y+1] && map[y+1][x] !== undefined) map[y+1][x] = 0;
-                }
+        // Place diamonds in the cave!
+        const diamondCount = 3 + Math.floor(Math.random() * 5);
+        for (let d = 0; d < diamondCount; d++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * (size - 1);
+            const dx = Math.floor(Math.cos(angle) * dist);
+            const dy = Math.floor(Math.sin(angle) * dist);
+            
+            if (map[cy + dy] && map[cy + dy][cx + dx] === 0) {
+                diamonds.push({
+                    x: (cx + dx + 0.5) * TILE_SIZE,
+                    y: (cy + dy + 0.5) * TILE_SIZE,
+                    collected: false,
+                    sparkle: Math.random() * Math.PI * 2
+                });
             }
         }
-        
-        // Ensure spawn area is clear (4x4 area)
-        for (let sy = 1; sy <= 4; sy++) {
-            for (let sx = 1; sx <= 4; sx++) {
-                if (map[sy]) map[sy][sx] = 0;
-            }
-        }
+    }
+    
+    // Alias for compatibility
+    function generateMaze() {
+        generateWorld();
     }
     
     function expandMazeDirection(direction) {
@@ -1140,7 +1222,7 @@
         const oldSize = MAP_SIZE;
         
         // Assign biomes to new area
-        const biomeTypes = ['normal', 'grassy', 'volcanic', 'icy'];
+        const biomeTypes = ['forest', 'blood', 'ice', 'volcanic', 'barren', 'swamp', 'desert'];
         const newBiome = biomeTypes[Math.floor(Math.random() * biomeTypes.length)];
         
         if (direction === 'right') {
@@ -1150,12 +1232,12 @@
                 if (!map[y]) map[y] = [];
                 if (!biomeMap[y]) biomeMap[y] = [];
                 for (let x = oldSize; x < newSize; x++) {
-                    map[y][x] = 1;
+                    map[y][x] = 0; // Open terrain
                     biomeMap[y][x] = newBiome;
                 }
             }
             MAP_SIZE = newSize;
-            carvePassages(oldSize - 3, 1, newSize - 1, MAP_SIZE - 1);
+            addOpenTerrainFeatures(oldSize - 1, 1, newSize - 1, MAP_SIZE - 1, newBiome);
         }
         else if (direction === 'down') {
             // Expand map downward
@@ -1165,12 +1247,12 @@
                 map[y] = [];
                 biomeMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
-                    map[y][x] = 1;
+                    map[y][x] = 0; // Open terrain
                     biomeMap[y][x] = downBiome;
                 }
             }
             MAP_SIZE = newSize;
-            carvePassages(1, oldSize - 3, MAP_SIZE - 1, newSize - 1);
+            addOpenTerrainFeatures(1, oldSize - 1, MAP_SIZE - 1, newSize - 1, downBiome);
         }
         else if (direction === 'left') {
             // Shift everything right and add new area on left
@@ -1183,11 +1265,11 @@
                 newBiomeMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     if (x < expandAmount) {
-                        newMap[y][x] = 1;
+                        newMap[y][x] = 0; // Open terrain
                         newBiomeMap[y][x] = leftBiome;
                     } else {
-                        newMap[y][x] = (map[y] && map[y][x - expandAmount] !== undefined) ? map[y][x - expandAmount] : 1;
-                        newBiomeMap[y][x] = (biomeMap[y] && biomeMap[y][x - expandAmount]) || 'normal';
+                        newMap[y][x] = (map[y] && map[y][x - expandAmount] !== undefined) ? map[y][x - expandAmount] : 0;
+                        newBiomeMap[y][x] = (biomeMap[y] && biomeMap[y][x - expandAmount]) || 'forest';
                     }
                 }
             }
@@ -1201,9 +1283,10 @@
             petState.targetX += shift;
             enemies.forEach(e => e.x += shift);
             resources.forEach(r => r.x += shift);
+            diamonds.forEach(d => d.x += shift);
             paintings.forEach(p => { p.x += shift; p.mapX += expandAmount; });
             
-            carvePassages(1, 1, expandAmount + 3, MAP_SIZE - 1);
+            addOpenTerrainFeatures(1, 1, expandAmount + 1, MAP_SIZE - 1, leftBiome);
         }
         else if (direction === 'up') {
             // Shift everything down and add new area on top
@@ -1216,11 +1299,11 @@
                 newBiomeMap[y] = [];
                 for (let x = 0; x < MAP_SIZE; x++) {
                     if (y < expandAmount) {
-                        newMap[y][x] = 1;
+                        newMap[y][x] = 0; // Open terrain
                         newBiomeMap[y][x] = upBiome;
                     } else {
-                        newMap[y][x] = (map[y - expandAmount] && map[y - expandAmount][x] !== undefined) ? map[y - expandAmount][x] : 1;
-                        newBiomeMap[y][x] = (biomeMap[y - expandAmount] && biomeMap[y - expandAmount][x]) || 'normal';
+                        newMap[y][x] = (map[y - expandAmount] && map[y - expandAmount][x] !== undefined) ? map[y - expandAmount][x] : 0;
+                        newBiomeMap[y][x] = (biomeMap[y - expandAmount] && biomeMap[y - expandAmount][x]) || 'forest';
                     }
                 }
             }
@@ -1234,13 +1317,44 @@
             petState.targetY += shift;
             enemies.forEach(e => e.y += shift);
             resources.forEach(r => r.y += shift);
+            diamonds.forEach(d => d.y += shift);
             paintings.forEach(p => { p.y += shift; p.mapY += expandAmount; });
             
-            carvePassages(1, 1, MAP_SIZE - 1, expandAmount + 3);
+            addOpenTerrainFeatures(1, 1, MAP_SIZE - 1, expandAmount + 1, upBiome);
         }
         
         // Add new paintings
         addNewPaintings(5);
+    }
+    
+    function addOpenTerrainFeatures(x1, y1, x2, y2, biome) {
+        // Add scattered obstacles (trees, rocks)
+        for (let y = y1; y < y2; y++) {
+            for (let x = x1; x < x2; x++) {
+                if (map[y] && map[y][x] !== undefined && Math.random() < 0.08) {
+                    map[y][x] = 1;
+                }
+            }
+        }
+        
+        // Add a cave with diamonds (30% chance per expansion)
+        if (Math.random() < 0.3) {
+            const caveX = x1 + Math.floor(Math.random() * (x2 - x1 - 6)) + 3;
+            const caveY = y1 + Math.floor(Math.random() * (y2 - y1 - 6)) + 3;
+            createCave(caveX, caveY, 3 + Math.floor(Math.random() * 3));
+        }
+        
+        // Border walls at edges of world
+        for (let y = 0; y < MAP_SIZE; y++) {
+            if (map[y]) {
+                map[y][0] = 1;
+                map[y][MAP_SIZE - 1] = 1;
+            }
+        }
+        for (let x = 0; x < MAP_SIZE; x++) {
+            if (map[0]) map[0][x] = 1;
+            if (map[MAP_SIZE - 1]) map[MAP_SIZE - 1][x] = 1;
+        }
     }
     
     function carvePassages(x1, y1, x2, y2) {
@@ -1670,8 +1784,8 @@
         const healthMult = getPetBonus('health');
         const shieldMult = getPetBonus('shield');
         
-        player.x = 1.5 * TILE_SIZE;
-        player.y = 1.5 * TILE_SIZE;
+        player.x = (MAP_SIZE / 2) * TILE_SIZE;
+        player.y = (MAP_SIZE / 2) * TILE_SIZE;
         player.angle = 0;
         player.health = 100 * healthMult;
         player.maxHealth = 100 * healthMult;
@@ -1717,10 +1831,16 @@
         gameRunning = false;
         document.exitPointerLock();
         
-        // Bonus coins at game over (score / 5 + wave bonus)
-        const coinsEarned = Math.floor(player.score / 5) + (wave * 25);
+        // Check if won
+        const won = diamondsCollected >= DIAMONDS_TO_WIN;
+        
+        // Bonus coins at game over (score / 5 + wave bonus + diamond bonus)
+        const coinsEarned = Math.floor(player.score / 5) + (wave * 25) + (diamondsCollected * 10);
         player.coins += coinsEarned;
         
+        document.getElementById('gameOverTitle').textContent = won ? '🏆 VICTORY!' : 'TERMINATED';
+        document.getElementById('gameOverTitle').style.color = won ? '#00ff88' : '#ff0044';
+        document.getElementById('finalDiamonds').textContent = diamondsCollected;
         document.getElementById('finalScore').textContent = player.score;
         document.getElementById('coinsEarned').textContent = coinsEarned;
         document.getElementById('gameOverScreen').style.display = 'flex';
@@ -1871,11 +1991,30 @@
                 else if (r.type === 'health') player.health = Math.min(player.maxHealth, player.health + 30);
                 else if (r.type === 'shield') player.shield = Math.min(player.maxShield, player.shield + 20);
                 
-                // Bonus coins for collecting resources!
                 player.coins += 10;
-                
                 resources.splice(i, 1);
                 showNotification(`+${r.type.toUpperCase()}! +10💰`);
+            }
+        }
+        
+        // Collect DIAMONDS (main objective!)
+        for (const diamond of diamonds) {
+            if (diamond.collected) continue;
+            const dist = Math.sqrt((diamond.x - player.x) ** 2 + (diamond.y - player.y) ** 2);
+            if (dist < 35) {
+                diamond.collected = true;
+                diamondsCollected++;
+                player.coins += 50;
+                player.score += 100;
+                showNotification(`💎 DIAMOND! ${diamondsCollected}/${DIAMONDS_TO_WIN}`);
+                
+                // Check win condition
+                if (diamondsCollected >= DIAMONDS_TO_WIN) {
+                    showNotification('🏆 YOU WIN! 100 DIAMONDS COLLECTED!');
+                    setTimeout(() => {
+                        gameOver();
+                    }, 3000);
+                }
             }
         }
         
@@ -1995,25 +2134,29 @@
             const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             const y = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             
-            if (map[y][x] === 0) {
+            if (map[y] && map[y][x] === 0) {
                 const dist = Math.sqrt((x * TILE_SIZE - player.x) ** 2 + (y * TILE_SIZE - player.y) ** 2);
-                if (dist > TILE_SIZE * 5) {
-                    const types = [
-                        { name: 'Drone', health: 30, speed: 1.5, damage: 5, color: '#ff3333', size: 0.4 },
-                        { name: 'Sentinel', health: 80, speed: 1, damage: 10, color: '#ff8800', size: 0.6 },
-                        { name: 'Goliath', health: 200, speed: 0.6, damage: 20, color: '#1a1a1a', size: 0.9 },
-                    ];
+                if (dist > TILE_SIZE * 5 && dist < TILE_SIZE * 15) {
+                    // Get biome-specific monster
+                    const tileBiome = (biomeMap[y] && biomeMap[y][x]) || 'forest';
+                    const biomeData = BIOMES[tileBiome];
+                    const monster = biomeData.monster;
                     
-                    const typeIdx = Math.min(Math.floor(Math.random() * (1 + wave * 0.3)), 2);
-                    const type = types[typeIdx];
+                    const waveMultiplier = 1 + wave * 0.1;
                     
                     enemies.push({
                         x: (x + 0.5) * TILE_SIZE,
                         y: (y + 0.5) * TILE_SIZE,
-                        ...type,
-                        maxHealth: type.health * (1 + wave * 0.1),
-                        health: type.health * (1 + wave * 0.1),
-                        score: (typeIdx + 1) * 50 * wave, // 5x more score!
+                        name: monster.name,
+                        color: monster.color,
+                        eyeColor: monster.eyeColor,
+                        health: monster.health * waveMultiplier,
+                        maxHealth: monster.health * waveMultiplier,
+                        speed: monster.speed,
+                        damage: monster.damage,
+                        size: 0.6,
+                        biome: tileBiome,
+                        score: Math.floor(monster.health * 0.5) * wave,
                         lastAttack: 0,
                     });
                     
@@ -2223,7 +2366,7 @@
         // Get current biome based on player position
         const playerMapX = Math.floor(player.x / TILE_SIZE);
         const playerMapY = Math.floor(player.y / TILE_SIZE);
-        const currentBiome = (biomeMap[playerMapY] && biomeMap[playerMapY][playerMapX]) || 'normal';
+        const currentBiome = (biomeMap[playerMapY] && biomeMap[playerMapY][playerMapX]) || 'forest';
         const biomeData = BIOMES[currentBiome];
         const floorBase = biomeData.floorColor;
         
@@ -2303,7 +2446,7 @@
             const finalShade = distShade * sideShade * edgeShade;
             
             // Get biome for this wall tile
-            const biomeType = (biomeMap[rayResult.mapY] && biomeMap[rayResult.mapY][rayResult.mapX]) || 'normal';
+            const biomeType = (biomeMap[rayResult.mapY] && biomeMap[rayResult.mapY][rayResult.mapX]) || 'forest';
             const biome = BIOMES[biomeType];
             const wallBaseColor = biome.wallColor;
             
@@ -2318,10 +2461,15 @@
             // Top edge highlight based on biome
             const highlightStrength = distShade * 0.4;
             let highlightColor;
-            if (biomeType === 'grassy') highlightColor = `rgba(100, 200, 100, ${highlightStrength})`;
+            if (biomeType === 'forest') highlightColor = `rgba(100, 200, 100, ${highlightStrength})`;
+            else if (biomeType === 'blood') highlightColor = `rgba(255, 80, 80, ${highlightStrength})`;
+            else if (biomeType === 'ice') highlightColor = `rgba(150, 200, 255, ${highlightStrength})`;
             else if (biomeType === 'volcanic') highlightColor = `rgba(255, 150, 50, ${highlightStrength})`;
-            else if (biomeType === 'icy') highlightColor = `rgba(150, 200, 255, ${highlightStrength})`;
-            else highlightColor = `rgba(255, 100, 80, ${highlightStrength})`;
+            else if (biomeType === 'barren') highlightColor = `rgba(180, 160, 120, ${highlightStrength})`;
+            else if (biomeType === 'swamp') highlightColor = `rgba(80, 150, 80, ${highlightStrength})`;
+            else if (biomeType === 'cave') highlightColor = `rgba(150, 100, 200, ${highlightStrength})`;
+            else if (biomeType === 'desert') highlightColor = `rgba(255, 200, 100, ${highlightStrength})`;
+            else highlightColor = `rgba(200, 200, 200, ${highlightStrength})`;
             ctx.fillStyle = highlightColor;
             ctx.fillRect(i, wallTop, 1, 3);
             
@@ -2424,6 +2572,9 @@
         // Render resources
         renderResources(bob);
         
+        // Render diamonds
+        renderDiamonds(bob);
+        
         // Render pet following player
         renderPet(bob);
         
@@ -2481,41 +2632,301 @@
             
             if (!visible) continue; // Enemy is fully occluded by walls
             
-            // Draw robot enemy
-            const isBoss = enemy.color === '#1a1a1a';
-            const isMedium = enemy.color === '#ff8800';
-            
+            // Draw biome-specific monster
             ctx.save();
             ctx.translate(screenX, spriteY + spriteHeight / 2);
             
             const s = spriteHeight / 2;
+            const monsterColor = enemy.color || '#666666';
+            const eyeColor = enemy.eyeColor || '#ff0000';
+            const monsterName = enemy.name || 'Unknown';
             
-            // Glow
-            ctx.shadowColor = isBoss ? '#ff0000' : enemy.color;
-            ctx.shadowBlur = 20;
+            // Glow effect
+            ctx.shadowColor = eyeColor;
+            ctx.shadowBlur = 15;
             
-            // Body
-            ctx.fillStyle = isBoss ? '#1a1a1a' : (isMedium ? '#4a3520' : '#4a2020');
-            ctx.fillRect(-s * 0.3, -s * 0.4, s * 0.6, s * 0.8);
-            
-            // Head
-            ctx.fillRect(-s * 0.2, -s * 0.7, s * 0.4, s * 0.3);
-            
-            // Eyes
-            ctx.fillStyle = isBoss ? '#ff0000' : (isMedium ? '#ffaa00' : '#ff4444');
-            ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 10;
-            ctx.fillRect(-s * 0.15, -s * 0.6, s * 0.3, s * 0.08);
-            
-            // Arms
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = isBoss ? '#1a1a1a' : (isMedium ? '#4a3520' : '#4a2020');
-            ctx.fillRect(-s * 0.45, -s * 0.3, s * 0.12, s * 0.5);
-            ctx.fillRect(s * 0.33, -s * 0.3, s * 0.12, s * 0.5);
-            
-            // Legs
-            ctx.fillRect(-s * 0.25, s * 0.4, s * 0.18, s * 0.4);
-            ctx.fillRect(s * 0.07, s * 0.4, s * 0.18, s * 0.4);
+            // Draw different monster types based on biome
+            if (monsterName === 'Yeti') {
+                // Large furry creature
+                // Body - round and bulky
+                ctx.fillStyle = monsterColor;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.4, s * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Fur texture
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2;
+                    const fx = Math.cos(angle) * s * 0.35;
+                    const fy = Math.sin(angle) * s * 0.45;
+                    ctx.beginPath();
+                    ctx.moveTo(fx * 0.8, fy * 0.8);
+                    ctx.lineTo(fx * 1.2, fy * 1.2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                // Head
+                ctx.fillStyle = monsterColor;
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.55, s * 0.3, s * 0.25, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eyes
+                ctx.fillStyle = eyeColor;
+                ctx.beginPath();
+                ctx.arc(-s * 0.12, -s * 0.55, s * 0.07, 0, Math.PI * 2);
+                ctx.arc(s * 0.12, -s * 0.55, s * 0.07, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Arms - big and hairy
+                ctx.fillStyle = monsterColor;
+                ctx.fillRect(-s * 0.55, -s * 0.2, s * 0.2, s * 0.5);
+                ctx.fillRect(s * 0.35, -s * 0.2, s * 0.2, s * 0.5);
+                
+            } else if (monsterName === 'Wendigo') {
+                // Skeletal, antlered horror
+                ctx.fillStyle = monsterColor;
+                
+                // Thin body
+                ctx.fillRect(-s * 0.15, -s * 0.3, s * 0.3, s * 0.7);
+                
+                // Skull head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.5, s * 0.2, s * 0.25, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Antlers
+                ctx.strokeStyle = '#5a4a3a';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.15, -s * 0.7);
+                ctx.lineTo(-s * 0.35, -s * 0.95);
+                ctx.lineTo(-s * 0.45, -s * 0.85);
+                ctx.moveTo(-s * 0.35, -s * 0.95);
+                ctx.lineTo(-s * 0.25, -s * 1.05);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.15, -s * 0.7);
+                ctx.lineTo(s * 0.35, -s * 0.95);
+                ctx.lineTo(s * 0.45, -s * 0.85);
+                ctx.moveTo(s * 0.35, -s * 0.95);
+                ctx.lineTo(s * 0.25, -s * 1.05);
+                ctx.stroke();
+                
+                // Glowing eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 20;
+                ctx.fillRect(-s * 0.12, -s * 0.55, s * 0.08, s * 0.05);
+                ctx.fillRect(s * 0.04, -s * 0.55, s * 0.08, s * 0.05);
+                
+                // Long arms
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = monsterColor;
+                ctx.fillRect(-s * 0.4, -s * 0.25, s * 0.1, s * 0.6);
+                ctx.fillRect(s * 0.3, -s * 0.25, s * 0.1, s * 0.6);
+                
+            } else if (monsterName === 'Vampire') {
+                // Humanoid with cape
+                ctx.fillStyle = monsterColor;
+                
+                // Cape
+                ctx.fillStyle = '#1a0505';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.45, -s * 0.4);
+                ctx.lineTo(-s * 0.5, s * 0.5);
+                ctx.lineTo(s * 0.5, s * 0.5);
+                ctx.lineTo(s * 0.45, -s * 0.4);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Body
+                ctx.fillStyle = '#2a1515';
+                ctx.fillRect(-s * 0.2, -s * 0.3, s * 0.4, s * 0.6);
+                
+                // Head
+                ctx.fillStyle = '#dda0a0';
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.5, s * 0.18, s * 0.2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Red eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(-s * 0.07, -s * 0.52, s * 0.04, 0, Math.PI * 2);
+                ctx.arc(s * 0.07, -s * 0.52, s * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Fangs
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.05, -s * 0.35);
+                ctx.lineTo(-s * 0.03, -s * 0.25);
+                ctx.lineTo(-s * 0.01, -s * 0.35);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.05, -s * 0.35);
+                ctx.lineTo(s * 0.03, -s * 0.25);
+                ctx.lineTo(s * 0.01, -s * 0.35);
+                ctx.fill();
+                
+            } else if (monsterName === 'Fire Demon') {
+                // Fiery creature
+                ctx.fillStyle = monsterColor;
+                
+                // Flaming body
+                for (let f = 0; f < 8; f++) {
+                    const flameOffset = Math.sin(Date.now() * 0.01 + f) * s * 0.1;
+                    ctx.fillStyle = f % 2 === 0 ? '#ff3300' : '#ffaa00';
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.25 + f * s * 0.07, s * 0.3);
+                    ctx.lineTo(-s * 0.2 + f * s * 0.07, -s * 0.3 + flameOffset);
+                    ctx.lineTo(-s * 0.15 + f * s * 0.07, s * 0.3);
+                    ctx.fill();
+                }
+                
+                // Core body
+                ctx.fillStyle = '#1a0500';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.25, s * 0.35, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 25;
+                ctx.fillRect(-s * 0.15, -s * 0.1, s * 0.1, s * 0.05);
+                ctx.fillRect(s * 0.05, -s * 0.1, s * 0.1, s * 0.05);
+                
+            } else if (monsterName === 'Dust Wraith') {
+                // Ghostly sandy figure
+                const time = Date.now() * 0.003;
+                
+                // Swirling dust effect
+                ctx.globalAlpha = 0.7;
+                for (let d = 0; d < 6; d++) {
+                    const swirl = Math.sin(time + d) * s * 0.15;
+                    ctx.fillStyle = `rgba(140, 120, 100, ${0.3 + d * 0.1})`;
+                    ctx.beginPath();
+                    ctx.ellipse(swirl, -s * 0.2 + d * s * 0.12, s * 0.3, s * 0.1, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                
+                // Core with glowing eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 30;
+                ctx.beginPath();
+                ctx.arc(-s * 0.1, -s * 0.3, s * 0.06, 0, Math.PI * 2);
+                ctx.arc(s * 0.1, -s * 0.3, s * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+                
+            } else if (monsterName === 'Swamp Thing') {
+                // Mossy, dripping creature
+                ctx.fillStyle = monsterColor;
+                
+                // Body - bulky and irregular
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.35, s * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Vines/moss hanging
+                ctx.strokeStyle = '#1a3a1a';
+                ctx.lineWidth = 3;
+                for (let v = 0; v < 5; v++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.3 + v * s * 0.15, s * 0.3);
+                    ctx.lineTo(-s * 0.25 + v * s * 0.15, s * 0.5 + Math.sin(Date.now() * 0.003 + v) * s * 0.1);
+                    ctx.stroke();
+                }
+                
+                // Glowing eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.arc(-s * 0.12, -s * 0.1, s * 0.08, 0, Math.PI * 2);
+                ctx.arc(s * 0.12, -s * 0.1, s * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+                
+            } else if (monsterName === 'Cave Troll') {
+                // Massive, hunched creature
+                ctx.fillStyle = monsterColor;
+                
+                // Bulky body
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.1, s * 0.45, s * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Small head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.4, s * 0.22, s * 0.18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(-s * 0.08, -s * 0.4, s * 0.05, 0, Math.PI * 2);
+                ctx.arc(s * 0.08, -s * 0.4, s * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Massive arms
+                ctx.fillStyle = monsterColor;
+                ctx.shadowBlur = 0;
+                ctx.fillRect(-s * 0.6, -s * 0.2, s * 0.18, s * 0.7);
+                ctx.fillRect(s * 0.42, -s * 0.2, s * 0.18, s * 0.7);
+                
+            } else if (monsterName === 'Mummy') {
+                // Wrapped figure
+                ctx.fillStyle = monsterColor;
+                
+                // Body wrapped in bandages
+                ctx.fillRect(-s * 0.2, -s * 0.4, s * 0.4, s * 0.8);
+                
+                // Bandage wraps
+                ctx.strokeStyle = '#e0d0b0';
+                ctx.lineWidth = 2;
+                for (let b = 0; b < 8; b++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.22, -s * 0.35 + b * s * 0.12);
+                    ctx.lineTo(s * 0.22, -s * 0.35 + b * s * 0.12);
+                    ctx.stroke();
+                }
+                
+                // Head
+                ctx.fillStyle = monsterColor;
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.55, s * 0.18, s * 0.2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Glowing eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 25;
+                ctx.beginPath();
+                ctx.arc(-s * 0.07, -s * 0.55, s * 0.04, 0, Math.PI * 2);
+                ctx.arc(s * 0.07, -s * 0.55, s * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+                
+            } else {
+                // Default humanoid monster
+                ctx.fillStyle = monsterColor;
+                ctx.fillRect(-s * 0.25, -s * 0.4, s * 0.5, s * 0.7);
+                
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.55, s * 0.2, s * 0.2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eyes
+                ctx.fillStyle = eyeColor;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(-s * 0.08, -s * 0.55, s * 0.05, 0, Math.PI * 2);
+                ctx.arc(s * 0.08, -s * 0.55, s * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+            }
             
             // Health bar
             const barWidth = s * 0.8;
@@ -2566,6 +2977,76 @@
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(0, 0, size / 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+    }
+    
+    function renderDiamonds(bob) {
+        const time = Date.now() * 0.002;
+        
+        for (const diamond of diamonds) {
+            if (diamond.collected) continue;
+            
+            const dx = diamond.x - player.x;
+            const dy = diamond.y - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            const angleToD = Math.atan2(dy, dx);
+            let relAngle = angleToD - player.angle;
+            while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+            while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+            
+            if (Math.abs(relAngle) > FOV / 2 + 0.3) continue;
+            if (dist > RENDER_DIST * TILE_SIZE) continue;
+            
+            const screenCol = Math.floor(canvas.width / 2 + (relAngle / FOV) * canvas.width);
+            if (screenCol >= 0 && screenCol < zBuffer.length && dist > zBuffer[screenCol]) continue;
+            
+            const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+            const size = (TILE_SIZE * 0.5 / dist) * canvas.height;
+            const floatY = Math.sin(time + diamond.sparkle) * 5;
+            const screenY = canvas.height / 2 + bob + floatY;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Sparkle effect
+            const sparkle = 0.7 + Math.sin(time * 3 + diamond.sparkle) * 0.3;
+            
+            // Draw diamond shape
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 30 * sparkle;
+            
+            // Diamond gradient
+            const grad = ctx.createLinearGradient(-size/2, -size/2, size/2, size/2);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.3, '#00ffff');
+            grad.addColorStop(0.7, '#0088ff');
+            grad.addColorStop(1, '#ff00ff');
+            
+            ctx.fillStyle = grad;
+            
+            // Draw diamond shape (octagon-ish)
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.6); // Top
+            ctx.lineTo(size * 0.4, -size * 0.2);
+            ctx.lineTo(size * 0.4, size * 0.2);
+            ctx.lineTo(0, size * 0.6); // Bottom
+            ctx.lineTo(-size * 0.4, size * 0.2);
+            ctx.lineTo(-size * 0.4, -size * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Inner shine
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.6 + sparkle * 0.4})`;
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.3);
+            ctx.lineTo(size * 0.15, 0);
+            ctx.lineTo(0, size * 0.3);
+            ctx.lineTo(-size * 0.15, 0);
+            ctx.closePath();
             ctx.fill();
             
             ctx.restore();
@@ -2889,21 +3370,17 @@
                     const screenY = 75 + dy * tileSize;
                     
                     // Get biome color
-                    const tileBiome = (biomeMap[mapY] && biomeMap[mapY][mapX]) || 'normal';
-                    const biomeColors = {
-                        normal: { wall: '#660000', floor: '#1a0505' },
-                        grassy: { wall: '#225522', floor: '#0a1a0a' },
-                        volcanic: { wall: '#662200', floor: '#1a0a00' },
-                        icy: { wall: '#334466', floor: '#0a1020' }
-                    };
-                    const colors = biomeColors[tileBiome];
+                    const tileBiome = (biomeMap[mapY] && biomeMap[mapY][mapX]) || 'forest';
+                    const biome = BIOMES[tileBiome];
+                    const wallColor = biome ? `rgb(${biome.wallColor.join(',')})` : '#666666';
+                    const floorColor = biome ? `rgb(${biome.floorColor.join(',')})` : '#222222';
                     
                     if (map[mapY] && map[mapY][mapX] === 1) {
-                        miniCtx.fillStyle = colors.wall;
+                        miniCtx.fillStyle = wallColor;
                         miniCtx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
                     } else {
                         // Floor
-                        miniCtx.fillStyle = colors.floor;
+                        miniCtx.fillStyle = floorColor;
                         miniCtx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize, tileSize);
                     }
                 }
@@ -2937,6 +3414,27 @@
                 miniCtx.fill();
             }
         }
+        
+        // Draw diamonds (important!)
+        miniCtx.fillStyle = '#00ffff';
+        miniCtx.shadowColor = '#00ffff';
+        miniCtx.shadowBlur = 8;
+        for (const diamond of diamonds) {
+            if (diamond.collected) continue;
+            const dx = 75 + (diamond.x / TILE_SIZE - playerTileX) * tileSize;
+            const dy = 75 + (diamond.y / TILE_SIZE - playerTileY) * tileSize;
+            if (dx > 5 && dx < 145 && dy > 5 && dy < 145) {
+                // Diamond shape
+                miniCtx.beginPath();
+                miniCtx.moveTo(dx, dy - 4);
+                miniCtx.lineTo(dx + 3, dy);
+                miniCtx.lineTo(dx, dy + 4);
+                miniCtx.lineTo(dx - 3, dy);
+                miniCtx.closePath();
+                miniCtx.fill();
+            }
+        }
+        miniCtx.shadowBlur = 0;
         
         // Draw player (always center)
         miniCtx.fillStyle = '#00f7ff';
@@ -3018,7 +3516,7 @@
             ctx.stroke();
         }
         
-        // Draw walls
+        // Draw terrain and walls
         for (let dy = -viewRadius; dy <= viewRadius; dy++) {
             for (let dx = -viewRadius; dx <= viewRadius; dx++) {
                 const mapX = Math.floor(playerTileX + dx);
@@ -3028,11 +3526,38 @@
                     const screenX = centerX + dx * tileSize;
                     const screenY = centerY + dy * tileSize;
                     
+                    const tileBiome = (biomeMap[mapY] && biomeMap[mapY][mapX]) || 'forest';
+                    const biome = BIOMES[tileBiome];
+                    
                     if (map[mapY] && map[mapY][mapX] === 1) {
-                        ctx.fillStyle = 'rgba(150, 30, 30, 0.8)';
+                        const wc = biome ? biome.wallColor : [100, 100, 100];
+                        ctx.fillStyle = `rgba(${wc[0]}, ${wc[1]}, ${wc[2]}, 0.8)`;
+                        ctx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize - 1, tileSize - 1);
+                    } else {
+                        const fc = biome ? biome.floorColor : [30, 30, 30];
+                        ctx.fillStyle = `rgba(${fc[0]}, ${fc[1]}, ${fc[2]}, 0.5)`;
                         ctx.fillRect(screenX - tileSize/2, screenY - tileSize/2, tileSize - 1, tileSize - 1);
                     }
                 }
+            }
+        }
+        
+        // Draw diamonds on VR map
+        ctx.fillStyle = '#00ffff';
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 20;
+        for (const diamond of diamonds) {
+            if (diamond.collected) continue;
+            const dx = centerX + (diamond.x / TILE_SIZE - playerTileX) * tileSize;
+            const dy = centerY + (diamond.y / TILE_SIZE - playerTileY) * tileSize;
+            if (Math.abs(dx - centerX) < mapSize/2 && Math.abs(dy - centerY) < mapSize/2) {
+                ctx.beginPath();
+                ctx.moveTo(dx, dy - 8);
+                ctx.lineTo(dx + 6, dy);
+                ctx.lineTo(dx, dy + 8);
+                ctx.lineTo(dx - 6, dy);
+                ctx.closePath();
+                ctx.fill();
             }
         }
         
@@ -3151,6 +3676,16 @@
         document.getElementById('ammoVal').textContent = player.ammo;
         document.getElementById('waveNum').textContent = wave;
         document.getElementById('enemyCount').textContent = `${enemiesKilled}/${enemiesPerWave}`;
+        document.getElementById('diamondVal').textContent = diamondsCollected;
+        document.getElementById('diamondGoal').textContent = DIAMONDS_TO_WIN;
+        
+        // Update current biome display
+        const playerTileX = Math.floor(player.x / TILE_SIZE);
+        const playerTileY = Math.floor(player.y / TILE_SIZE);
+        const currentBiome = (biomeMap[playerTileY] && biomeMap[playerTileY][playerTileX]) || 'forest';
+        const biomeData = BIOMES[currentBiome];
+        document.getElementById('biomeName').textContent = biomeData.name;
+        document.getElementById('biomeHud').style.borderColor = `rgb(${biomeData.wallColor.join(',')})`;
     }
     
     function showNotification(text) {
