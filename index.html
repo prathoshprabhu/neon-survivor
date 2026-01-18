@@ -938,7 +938,7 @@
         ammo: 75,
         score: 0,
         kills: 0,
-        coins: 100,
+        coins: 500, // Start with more coins!
         lastShot: 0,
         bobPhase: 0,
         shooting: false,
@@ -1543,7 +1543,8 @@
         gameRunning = false;
         document.exitPointerLock();
         
-        const coinsEarned = Math.floor(player.score / 10);
+        // Bonus coins at game over (score / 5 + wave bonus)
+        const coinsEarned = Math.floor(player.score / 5) + (wave * 25);
         player.coins += coinsEarned;
         
         document.getElementById('finalScore').textContent = player.score;
@@ -1694,8 +1695,12 @@
                 if (r.type === 'ammo') player.ammo += 25;
                 else if (r.type === 'health') player.health = Math.min(player.maxHealth, player.health + 30);
                 else if (r.type === 'shield') player.shield = Math.min(player.maxShield, player.shield + 20);
+                
+                // Bonus coins for collecting resources!
+                player.coins += 10;
+                
                 resources.splice(i, 1);
-                showNotification(`+${r.type.toUpperCase()}!`);
+                showNotification(`+${r.type.toUpperCase()}! +10💰`);
             }
         }
         
@@ -1728,7 +1733,11 @@
             enemiesSpawned = 0;
             enemiesKilled = 0;
             player.ammo += 30;
-            showNotification(`⚡ WAVE ${wave}!`);
+            
+            // Wave completion coin bonus!
+            const waveBonus = wave * 25;
+            player.coins += waveBonus;
+            showNotification(`⚡ WAVE ${wave}! +${waveBonus} 💰`);
             
             if (wave === 2 && !WEAPONS[1].unlocked) { WEAPONS[1].unlocked = true; showNotification('🔪 KNIFE UNLOCKED!'); }
             if (wave === 3 && !WEAPONS[2].unlocked) { WEAPONS[2].unlocked = true; showNotification('💥 .44 UNLOCKED!'); }
@@ -1829,7 +1838,7 @@
                         ...type,
                         maxHealth: type.health * (1 + wave * 0.1),
                         health: type.health * (1 + wave * 0.1),
-                        score: (typeIdx + 1) * 10 * wave,
+                        score: (typeIdx + 1) * 50 * wave, // 5x more score!
                         lastAttack: 0,
                     });
                     
@@ -1885,7 +1894,13 @@
         
         player.kills++;
         const coinBonus = getPetBonus('coins');
-        player.score += Math.floor(enemy.score * coinBonus);
+        const scoreGain = Math.floor(enemy.score * coinBonus);
+        player.score += scoreGain;
+        
+        // Direct coin rewards on kill!
+        const coinReward = Math.floor(scoreGain / 5) + 5;
+        player.coins += coinReward;
+        
         enemiesKilled++;
         
         // Chance to drop resource
