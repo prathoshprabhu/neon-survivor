@@ -504,10 +504,16 @@
     <div id="startScreen">
         <h1 class="game-title">NEON SURVIVOR 3D</h1>
         <p class="game-subtitle">YEAR 2087</p>
-        <button class="start-button" onclick="openPetShop()">ENTER THE MAZE</button>
+        
+        <p style="color: var(--neon-cyan); margin-bottom: 15px; font-family: 'Orbitron', monospace;">Choose your controls:</p>
+        <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+            <button class="start-button" style="padding: 15px 35px; font-size: 18px;" onclick="selectControls('wasd')">WASD</button>
+            <button class="start-button" style="padding: 15px 35px; font-size: 18px;" onclick="selectControls('arrows')">ARROW KEYS</button>
+        </div>
+        
         <div class="controls-info">
-            <p>🖥️ <span>WASD</span> Move | <span>Q/E</span> Turn | <span>SPACE/CLICK</span> Shoot</p>
-            <p>🖱️ <span>DRAG</span> or <span>DBL-CLICK</span> to look | <span>SCROLL</span> Weapons</p>
+            <p>🖱️ <span>MOVE TRACKPAD/MOUSE</span> to look around</p>
+            <p>🖱️ <span>CLICK</span> to shoot | <span>SCROLL</span> weapons</p>
             <p>📱 Touch joysticks for mobile/tablet</p>
         </div>
     </div>
@@ -677,6 +683,7 @@
     let keys = {};
     let mouse = { x: 0, y: 0, locked: false };
     let touch = { active: false, moveX: 0, moveY: 0, lookDelta: 0 };
+    let controlScheme = 'wasd'; // 'wasd' or 'arrows'
     
     let wave = 1;
     let enemiesPerWave = 5;
@@ -773,58 +780,44 @@
         });
         document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         
-        // Mouse input (desktop - works with mouse, trackpad, etc.)
-        let mouseDown = false;
-        let lastMouseX = 0;
+        // Mouse/Trackpad input - MOVE to look, CLICK to shoot
+        let lastMouseX = null;
         
-        // Click to shoot (works even without pointer lock)
+        // Click to shoot
         canvas.addEventListener('click', e => {
             if (gameRunning) {
                 shoot();
             }
         });
         
-        // Right-click or double-click to enable pointer lock (optional for mouse users)
-        canvas.addEventListener('dblclick', () => {
-            if (!mouse.locked && gameRunning) {
-                canvas.requestPointerLock();
-            }
-        });
-        
+        // Prevent right-click menu
         canvas.addEventListener('contextmenu', e => {
             e.preventDefault();
-            if (!mouse.locked && gameRunning) {
-                canvas.requestPointerLock();
-            }
         });
         
-        document.addEventListener('pointerlockchange', () => {
-            mouse.locked = document.pointerLockElement === canvas;
-        });
-        
-        // Mouse movement - works with pointer lock OR with drag
+        // Mouse/trackpad movement = look around (no clicking needed)
         document.addEventListener('mousemove', e => {
             if (!gameRunning) return;
             
-            if (mouse.locked) {
-                // Pointer lock mode - use movementX
-                player.angle += e.movementX * 0.002;
-            } else if (mouseDown) {
-                // Drag mode (trackpad friendly) - use delta from last position
-                const deltaX = e.clientX - lastMouseX;
-                player.angle += deltaX * 0.005;
+            // Initialize lastMouseX on first move
+            if (lastMouseX === null) {
+                lastMouseX = e.clientX;
+                return;
             }
+            
+            // Calculate delta and turn
+            const deltaX = e.clientX - lastMouseX;
+            player.angle += deltaX * 0.003;
             lastMouseX = e.clientX;
         });
         
-        // Track mouse button for drag-to-look (trackpad mode)
-        canvas.addEventListener('mousedown', e => {
-            mouseDown = true;
-            lastMouseX = e.clientX;
+        // Reset lastMouseX when mouse leaves/enters to prevent jumps
+        document.addEventListener('mouseleave', () => {
+            lastMouseX = null;
         });
         
-        document.addEventListener('mouseup', () => {
-            mouseDown = false;
+        canvas.addEventListener('mouseenter', e => {
+            lastMouseX = e.clientX;
         });
         
         // Mouse wheel to switch weapons
@@ -1052,6 +1045,11 @@
     // ============================================
     // GAME CONTROLS
     // ============================================
+    function selectControls(scheme) {
+        controlScheme = scheme;
+        openPetShop();
+    }
+    
     function startGame() {
         document.getElementById('petShopScreen').style.display = 'none';
         resetGame();
@@ -1134,32 +1132,43 @@
         const moveSpeed = (keys['shift'] ? 4 : baseSpeed) * speedMult;
         let dx = 0, dy = 0;
         
-        // Keyboard turning (Q/E or Arrow Left/Right)
-        const turnSpeed = 0.05;
-        if (keys['q'] || keys['arrowleft']) {
-            player.angle -= turnSpeed;
-        }
-        if (keys['e'] || keys['arrowright']) {
-            player.angle += turnSpeed;
-        }
-        
-        // Keyboard movement (WASD or Arrow Up/Down)
-        if (keys['w'] || keys['arrowup']) {
-            dx += Math.cos(player.angle) * moveSpeed;
-            dy += Math.sin(player.angle) * moveSpeed;
-        }
-        if (keys['s'] || keys['arrowdown']) {
-            dx -= Math.cos(player.angle) * moveSpeed;
-            dy -= Math.sin(player.angle) * moveSpeed;
-        }
-        // A/D for strafing
-        if (keys['a']) {
-            dx += Math.cos(player.angle - Math.PI/2) * moveSpeed;
-            dy += Math.sin(player.angle - Math.PI/2) * moveSpeed;
-        }
-        if (keys['d']) {
-            dx += Math.cos(player.angle + Math.PI/2) * moveSpeed;
-            dy += Math.sin(player.angle + Math.PI/2) * moveSpeed;
+        // Movement based on selected control scheme
+        if (controlScheme === 'wasd') {
+            // WASD controls
+            if (keys['w']) {
+                dx += Math.cos(player.angle) * moveSpeed;
+                dy += Math.sin(player.angle) * moveSpeed;
+            }
+            if (keys['s']) {
+                dx -= Math.cos(player.angle) * moveSpeed;
+                dy -= Math.sin(player.angle) * moveSpeed;
+            }
+            if (keys['a']) {
+                dx += Math.cos(player.angle - Math.PI/2) * moveSpeed;
+                dy += Math.sin(player.angle - Math.PI/2) * moveSpeed;
+            }
+            if (keys['d']) {
+                dx += Math.cos(player.angle + Math.PI/2) * moveSpeed;
+                dy += Math.sin(player.angle + Math.PI/2) * moveSpeed;
+            }
+        } else {
+            // Arrow key controls
+            if (keys['arrowup']) {
+                dx += Math.cos(player.angle) * moveSpeed;
+                dy += Math.sin(player.angle) * moveSpeed;
+            }
+            if (keys['arrowdown']) {
+                dx -= Math.cos(player.angle) * moveSpeed;
+                dy -= Math.sin(player.angle) * moveSpeed;
+            }
+            if (keys['arrowleft']) {
+                dx += Math.cos(player.angle - Math.PI/2) * moveSpeed;
+                dy += Math.sin(player.angle - Math.PI/2) * moveSpeed;
+            }
+            if (keys['arrowright']) {
+                dx += Math.cos(player.angle + Math.PI/2) * moveSpeed;
+                dy += Math.sin(player.angle + Math.PI/2) * moveSpeed;
+            }
         }
         
         // Touch movement
