@@ -1254,6 +1254,7 @@
     let touch = { active: false, moveX: 0, moveY: 0, lookDelta: 0 };
     window.lastSpacePress = 0; // Track space key to prevent accidental shooting
     let controlScheme = 'wasd'; // 'wasd' or 'arrows'
+    let isFiring = false; // Hold to rapid fire
     
     let wave = 1;
     let enemiesPerWave = 3; // Reduced for 99 Nights
@@ -1806,9 +1807,28 @@
         let lastMouseX = null;
         let totalMouseDelta = 0;
         
-        // Click to shoot (but NOT if caused by keyboard space)
+        // HOLD TO RAPID FIRE - mousedown starts firing, mouseup stops
+        canvas.addEventListener('mousedown', e => {
+            if (Date.now() - window.lastSpacePress < 200) return;
+            if (gameRunning && e.button === 0) { // Left click only
+                isFiring = true;
+                shoot(); // Fire immediately on press
+            }
+        });
+        
+        canvas.addEventListener('mouseup', e => {
+            if (e.button === 0) {
+                isFiring = false;
+            }
+        });
+        
+        // Also stop firing if mouse leaves canvas
+        canvas.addEventListener('mouseleave', e => {
+            isFiring = false;
+        });
+        
+        // Legacy click support (for single taps)
         canvas.addEventListener('click', e => {
-            // Prevent shooting if space was just pressed (space can trigger click on focused elements)
             if (Date.now() - window.lastSpacePress < 200) return;
             if (gameRunning) {
                 shoot();
@@ -2276,11 +2296,16 @@
     function update() {
         const now = Date.now();
         
+        // RAPID FIRE - continuously shoot while holding mouse
+        if (isFiring && gameRunning) {
+            shoot();
+        }
+        
         // Update weather system
         updateWeather();
         
         // Player movement - ROBLOX-STYLE with smooth acceleration
-        const baseSpeed = 7;
+        const baseSpeed = 5; // Reduced for better control
         const speedMult = getPetBonus('speed');
         const sprintMult = keys['shift'] ? 1.6 : 1;
         const targetSpeed = baseSpeed * speedMult * sprintMult;
