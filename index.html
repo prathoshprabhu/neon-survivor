@@ -753,7 +753,7 @@
     const TILE_SIZE = 64;
     let MAP_SIZE = 32; // Starting size, will grow
     const FOV = Math.PI / 3;
-    const RENDER_DIST = 15; // Reduced for performance
+    const RENDER_DIST = 10; // Minimal for maximum performance
     let mapOffsetX = 0; // For infinite maze
     let mapOffsetY = 0;
     
@@ -2267,7 +2267,8 @@
     // GAME LOOP
     // ============================================
     // Unlimited FPS for smooth gameplay
-    const MAX_SHADOW_BLUR = 5; // Reduced for performance - prevents freezing
+    const MAX_SHADOW_BLUR = 0; // DISABLED for performance
+    const DISABLE_SHADOWS = true; // Performance mode
     
     let lastFrameTime = 0;
     let frameCount = 0;
@@ -3283,7 +3284,7 @@
         zBuffer.fill(Infinity);
         
         // Raycasting for TALL walls - optimized for performance
-        const RAY_SKIP = 2; // Draw every 2nd column for better performance
+        const RAY_SKIP = 4; // Draw every 4th column for maximum performance
         const numRays = Math.floor(canvas.width / RAY_SKIP);
         const bob = Math.sin(player.bobPhase) * 5;
         
@@ -3532,7 +3533,7 @@
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 3;
             ctx.shadowColor = '#aaddff';
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.moveTo(lightning.x, 0);
             let y = 0;
@@ -3571,7 +3572,7 @@
             dist: Math.sqrt((e.x - player.x) ** 2 + (e.y - player.y) ** 2)
         })).filter(e => e.dist < RENDER_DIST * TILE_SIZE)
           .sort((a, b) => a.dist - b.dist)
-          .slice(0, 15); // MAX 15 enemies rendered
+          .slice(0, 10); // MAX 10 enemies for performance
         
         for (const enemy of sortedEnemies) {
             const dx = enemy.x - player.x;
@@ -3610,48 +3611,38 @@
             
             if (!visible) continue; // Enemy is fully occluded by walls
             
-            // Draw biome-specific monster
+            // SIMPLIFIED MONSTER RENDERING FOR PERFORMANCE
             ctx.save();
             ctx.translate(screenX, spriteY + spriteHeight / 2);
             
             const s = spriteHeight / 2;
             const monsterColor = enemy.color || '#666666';
             const eyeColor = enemy.eyeColor || '#ff0000';
-            const monsterName = enemy.name || 'Unknown';
             
-            // Glow effect
-            ctx.shadowColor = eyeColor;
-            ctx.shadowBlur = Math.min(15, MAX_SHADOW_BLUR);
+            // Simple body - just a colored oval
+            ctx.fillStyle = monsterColor;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, s * 0.4, s * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
             
-            // Draw forest creatures - simplified for performance
-            if (monsterName === 'Wolf') {
-                // Wolf - sleek predator
-                ctx.fillStyle = monsterColor;
-                // Body
+            // Simple eyes
+            ctx.fillStyle = eyeColor;
+            ctx.beginPath();
+            ctx.arc(-s * 0.12, -s * 0.15, s * 0.08, 0, Math.PI * 2);
+            ctx.arc(s * 0.12, -s * 0.15, s * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Boss indicator
+            if (enemy.isBoss) {
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.ellipse(0, 0, s * 0.35, s * 0.25, 0, 0, Math.PI * 2);
-                ctx.fill();
-                // Head
-                ctx.beginPath();
-                ctx.ellipse(0, -s * 0.35, s * 0.2, s * 0.18, 0, 0, Math.PI * 2);
-                ctx.fill();
-                // Ears
-                ctx.beginPath();
-                ctx.moveTo(-s * 0.15, -s * 0.5);
-                ctx.lineTo(-s * 0.1, -s * 0.65);
-                ctx.lineTo(-s * 0.05, -s * 0.5);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(s * 0.05, -s * 0.5);
-                ctx.lineTo(s * 0.1, -s * 0.65);
-                ctx.lineTo(s * 0.15, -s * 0.5);
-                ctx.fill();
-                // Eyes
-                ctx.fillStyle = eyeColor;
-                ctx.beginPath();
-                ctx.arc(-s * 0.08, -s * 0.35, s * 0.04, 0, Math.PI * 2);
-                ctx.arc(s * 0.08, -s * 0.35, s * 0.04, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.ellipse(0, 0, s * 0.5, s * 0.6, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            // Skip all the complex monster-specific rendering
+            if (false) { // DISABLED FOR PERFORMANCE
                 
             } else if (monsterName === 'Bear') {
                 // Bear - big and bulky
@@ -4217,12 +4208,13 @@
                 
                 // Eyes
                 ctx.fillStyle = eyeColor;
-                ctx.shadowBlur = Math.min(15, MAX_SHADOW_BLUR);
+                ctx.shadowBlur = 0;
                 ctx.beginPath();
                 ctx.arc(-s * 0.08, -s * 0.55, s * 0.05, 0, Math.PI * 2);
                 ctx.arc(s * 0.08, -s * 0.55, s * 0.05, 0, Math.PI * 2);
                 ctx.fill();
             }
+            } // END if(false) - DISABLED COMPLEX RENDERING
             
             // Health bar
             const barWidth = s * 0.8;
@@ -4263,7 +4255,7 @@
             const color = colors[res.type] || '#ffffff';
             
             ctx.shadowColor = color;
-            ctx.shadowBlur = Math.min(20, MAX_SHADOW_BLUR);
+            ctx.shadowBlur = 0;
             ctx.fillStyle = color;
             ctx.beginPath();
             ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
@@ -4287,7 +4279,7 @@
             dist: Math.sqrt((t.x - player.x) ** 2 + (t.y - player.y) ** 2)
         })).filter(t => t.dist < RENDER_DIST * TILE_SIZE && t.dist > TILE_SIZE * 0.5)
           .sort((a, b) => a.dist - b.dist) // Near to far for limiting
-          .slice(0, 30); // MAX 30 trees
+          .slice(0, 15); // MAX 15 trees for performance
         
         for (const tree of sortedTrees) {
             const dx = tree.x - player.x;
@@ -4561,7 +4553,7 @@
             
             // Draw diamond shape
             ctx.shadowColor = '#00ffff';
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 0;
             
             // Diamond gradient
             const grad = ctx.createLinearGradient(-size/2, -size/2, size/2, size/2);
@@ -4688,7 +4680,7 @@
             ctx.font = `bold ${Math.max(10, s * 0.12)}px Fredoka One`;
             ctx.textAlign = 'center';
             ctx.shadowColor = '#000';
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 0;
             const helpText = dist < TILE_SIZE * 3 ? '🙋 RESCUE ME!' : '❓ HELP!';
             ctx.fillText(helpText, 0, -s * 0.65 + bodyBob);
             
@@ -4745,7 +4737,7 @@
         
         // Subtle glow
         ctx.shadowColor = glow;
-        ctx.shadowBlur = Math.min(15, MAX_SHADOW_BLUR);
+        ctx.shadowBlur = 0;
         
         if (petType === 'dragon' || petType === 'cosmic') {
             // Dragon body - serpentine
@@ -4833,7 +4825,7 @@
             
             // Eyes
             ctx.fillStyle = glow;
-            ctx.shadowBlur = 3;
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(size * 0.35, -size * 0.08, size * 0.03, 0, Math.PI * 2);
             ctx.fill();
@@ -4877,7 +4869,7 @@
             // Glowing eye
             ctx.fillStyle = '#ffffff';
             ctx.shadowColor = '#ffff00';
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(size * 0.3, -size * 0.12, size * 0.03, 0, Math.PI * 2);
             ctx.fill();
@@ -4905,7 +4897,7 @@
             ctx.fill();
             // Eyes
             ctx.fillStyle = glow;
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(size * 0.22, -size * 0.12, size * 0.035, 0, Math.PI * 2);
             ctx.arc(size * 0.32, -size * 0.1, size * 0.03, 0, Math.PI * 2);
@@ -5048,7 +5040,7 @@
             ctx.fillRect(8, -140, 6, 135);
             // Energy glow
             ctx.fillStyle = skin.accent;
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 0;
             ctx.fillRect(-2, -130, 10, 120);
             // Grip
             ctx.shadowBlur = 0;
@@ -5142,7 +5134,7 @@
         if (player.shooting && player.shootFrame < 5 && !weapon.melee) {
             ctx.fillStyle = '#ffaa00';
             ctx.shadowColor = '#ff6600';
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.moveTo(0, -180);
             ctx.lineTo(-25, -130);
@@ -5208,7 +5200,7 @@
         // Draw enemies
         miniCtx.fillStyle = '#ff3333';
         miniCtx.shadowColor = '#ff0000';
-        miniCtx.shadowBlur = 5;
+        miniCtx.shadowBlur = 0;
         for (const enemy of enemies) {
             const ex = 75 + (enemy.x / TILE_SIZE - playerTileX) * tileSize;
             const ey = 75 + (enemy.y / TILE_SIZE - playerTileY) * tileSize;
@@ -5236,7 +5228,7 @@
         // Draw diamonds (important!)
         miniCtx.fillStyle = '#00ffff';
         miniCtx.shadowColor = '#00ffff';
-        miniCtx.shadowBlur = 3;
+        miniCtx.shadowBlur = 0;
         for (const diamond of diamonds) {
             if (diamond.collected) continue;
             const dx = 75 + (diamond.x / TILE_SIZE - playerTileX) * tileSize;
@@ -5257,7 +5249,7 @@
         // Draw player (always center)
         miniCtx.fillStyle = '#00f7ff';
         miniCtx.shadowColor = '#00f7ff';
-        miniCtx.shadowBlur = 3;
+        miniCtx.shadowBlur = 0;
         miniCtx.beginPath();
         miniCtx.arc(75, 75, 5, 0, Math.PI * 2);
         miniCtx.fill();
@@ -5275,7 +5267,7 @@
         // Circular border
         miniCtx.strokeStyle = '#00f7ff';
         miniCtx.lineWidth = 2;
-        miniCtx.shadowBlur = 3;
+        miniCtx.shadowBlur = 0;
         miniCtx.beginPath();
         miniCtx.arc(75, 75, 72, 0, Math.PI * 2);
         miniCtx.stroke();
@@ -5363,7 +5355,7 @@
         // Draw diamonds on VR map
         ctx.fillStyle = '#00ffff';
         ctx.shadowColor = '#00ffff';
-        ctx.shadowBlur = Math.min(20, MAX_SHADOW_BLUR);
+        ctx.shadowBlur = 0;
         for (const diamond of diamonds) {
             if (diamond.collected) continue;
             const dx = centerX + (diamond.x / TILE_SIZE - playerTileX) * tileSize;
@@ -5382,7 +5374,7 @@
         // Draw enemies
         ctx.fillStyle = '#ff4444';
         ctx.shadowColor = '#ff0000';
-        ctx.shadowBlur = Math.min(15, MAX_SHADOW_BLUR);
+        ctx.shadowBlur = 0;
         for (const enemy of enemies) {
             const ex = centerX + (enemy.x / TILE_SIZE - playerTileX) * tileSize;
             const ey = centerY + (enemy.y / TILE_SIZE - playerTileY) * tileSize;
@@ -5400,7 +5392,7 @@
         }
         
         // Draw resources
-        ctx.shadowBlur = 5;
+        ctx.shadowBlur = 0;
         for (const res of resources) {
             const rx = centerX + (res.x / TILE_SIZE - playerTileX) * tileSize;
             const ry = centerY + (res.y / TILE_SIZE - playerTileY) * tileSize;
@@ -5429,7 +5421,7 @@
         // Draw player (center)
         ctx.fillStyle = '#00f7ff';
         ctx.shadowColor = '#00f7ff';
-        ctx.shadowBlur = Math.min(20, MAX_SHADOW_BLUR);
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
         ctx.fill();
@@ -5448,7 +5440,7 @@
         ctx.strokeStyle = '#00f7ff';
         ctx.lineWidth = 4;
         ctx.shadowColor = '#00f7ff';
-        ctx.shadowBlur = Math.min(30, MAX_SHADOW_BLUR);
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.arc(centerX, centerY, mapSize / 2 + 5, 0, Math.PI * 2);
         ctx.stroke();
