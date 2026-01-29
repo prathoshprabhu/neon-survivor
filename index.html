@@ -925,6 +925,7 @@
     let volcanoEntrance = null;
     let insideGlacier = false;
     let insideVolcano = false;
+    let insideMine = false;
     let secretBossSpawned = false;
     let volcanoBossSpawned = false;
     
@@ -2386,28 +2387,30 @@
             }
         }
         
-        // Check for entering Glacier or Volcano - REQUIRES killing 10 enemies first!
+        // Check for entering Glacier or Volcano - REQUIRES killing 10 enemies + JUMP to enter!
+        const isJumping = playerZ > 5; // Player is in the air
+        
         if (glacierEntrance && !insideGlacier) {
             const distToGlacier = Math.sqrt(
                 (player.x - glacierEntrance.x * TILE_SIZE) ** 2 + 
                 (player.y - glacierEntrance.y * TILE_SIZE) ** 2
             );
-            if (distToGlacier < TILE_SIZE * 2) {
+            if (distToGlacier < TILE_SIZE * 3) {
                 if (iceEnemiesKilled >= 10) {
                     iceTitanUnlocked = true;
-                    if (distToGlacier < TILE_SIZE * 1.5) {
+                    // JUMP INTO to enter the glacier
+                    if (distToGlacier < TILE_SIZE * 2 && isJumping) {
                         insideGlacier = true;
-                        showNotification('❄️ THE GLACIER OPENS! Ice Titan Awaits!');
+                        showNotification('❄️ ENTERING GLACIER! Ice Titan Awaits!');
                         if (!secretBossSpawned) {
                             spawnGlacierBoss();
                             secretBossSpawned = true;
                         }
+                    } else if (distToGlacier < TILE_SIZE * 2.5 && Date.now() % 3000 < 50) {
+                        showNotification('❄️ JUMP to enter the Glacier!');
                     }
-                } else {
-                    // Show message about needing more kills
-                    if (distToGlacier < TILE_SIZE * 1.5 && Date.now() % 2000 < 50) {
-                        showNotification(`❄️ Kill ${10 - iceEnemiesKilled} more Ice enemies to enter!`);
-                    }
+                } else if (distToGlacier < TILE_SIZE * 2.5 && Date.now() % 3000 < 50) {
+                    showNotification(`❄️ Kill ${10 - iceEnemiesKilled} more Ice enemies to enter!`);
                 }
             }
         }
@@ -2417,23 +2420,37 @@
                 (player.x - volcanoEntrance.x * TILE_SIZE) ** 2 + 
                 (player.y - volcanoEntrance.y * TILE_SIZE) ** 2
             );
-            if (distToVolcano < TILE_SIZE * 2) {
+            if (distToVolcano < TILE_SIZE * 3) {
                 if (fireEnemiesKilled >= 10) {
                     fireLordUnlocked = true;
-                    if (distToVolcano < TILE_SIZE * 1.5) {
+                    // JUMP INTO to enter the volcano
+                    if (distToVolcano < TILE_SIZE * 2 && isJumping) {
                         insideVolcano = true;
-                        showNotification('🌋 THE VOLCANO ERUPTS! Fire Lord Emerges!');
+                        showNotification('🌋 ENTERING VOLCANO! Fire Lord Emerges!');
                         if (!volcanoBossSpawned) {
                             spawnVolcanoBoss();
                             volcanoBossSpawned = true;
                         }
+                    } else if (distToVolcano < TILE_SIZE * 2.5 && Date.now() % 3000 < 50) {
+                        showNotification('🔥 JUMP to enter the Volcano!');
                     }
-                } else {
-                    // Show message about needing more kills
-                    if (distToVolcano < TILE_SIZE * 1.5 && Date.now() % 2000 < 50) {
-                        showNotification(`🔥 Kill ${10 - fireEnemiesKilled} more Fire enemies to enter!`);
-                    }
+                } else if (distToVolcano < TILE_SIZE * 2.5 && Date.now() % 3000 < 50) {
+                    showNotification(`🔥 Kill ${10 - fireEnemiesKilled} more Fire enemies to enter!`);
                 }
+            }
+        }
+        
+        // MINE ENTRANCE - Jump into the crystal rock to enter caves
+        if (mineEntranceRock && !insideMine) {
+            const distToMine = Math.sqrt(
+                (player.x - mineEntranceRock.x * TILE_SIZE) ** 2 + 
+                (player.y - mineEntranceRock.y * TILE_SIZE) ** 2
+            );
+            if (distToMine < TILE_SIZE * 2 && isJumping) {
+                insideMine = true;
+                showNotification('⛏️ ENTERING THE MINES! Watch for Golems!');
+            } else if (distToMine < TILE_SIZE * 2.5 && Date.now() % 3000 < 50) {
+                showNotification('⛏️ JUMP to enter the Mines!');
             }
         }
         
@@ -4212,11 +4229,12 @@
     }
     
     function renderTrees(bob) {
-        // Sort trees by distance (far to near)
+        // Sort trees by distance (far to near) for proper depth
         const sortedTrees = trees.map(t => ({
             ...t,
             dist: Math.sqrt((t.x - player.x) ** 2 + (t.y - player.y) ** 2)
-        })).sort((a, b) => b.dist - a.dist);
+        })).filter(t => t.dist < RENDER_DIST * TILE_SIZE && t.dist > TILE_SIZE * 0.5)
+          .sort((a, b) => b.dist - a.dist);
         
         for (const tree of sortedTrees) {
             const dx = tree.x - player.x;
@@ -4229,61 +4247,85 @@
             while (relAngle < -Math.PI) relAngle += Math.PI * 2;
             
             if (Math.abs(relAngle) > FOV / 2 + 0.3) continue;
-            if (dist > RENDER_DIST * TILE_SIZE) continue;
-            
-            const screenCol = Math.floor(canvas.width / 2 + (relAngle / FOV) * canvas.width);
-            if (screenCol >= 0 && screenCol < zBuffer.length && dist > zBuffer[screenCol]) continue;
             
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-            const scale = (TILE_SIZE / dist) * canvas.height;
-            const treeHeight = (tree.height / TILE_SIZE) * scale;
-            const trunkWidth = (tree.trunkWidth / TILE_SIZE) * scale;
-            const foliageSize = (tree.foliageSize / TILE_SIZE) * scale;
-            const screenY = canvas.height / 2 + bob - playerZ * 3;
+            // 3D SCALING - trees get smaller with distance
+            const scale = Math.min(2.5, (TILE_SIZE * 1.5 / dist) * 300);
+            const treeHeight = scale * (tree.height / 80);
+            const trunkWidth = scale * 0.15;
+            const foliageSize = scale * 0.4;
+            
+            // 3D VERTICAL POSITION - trees appear lower when far away
+            const verticalOffset = (dist / (RENDER_DIST * TILE_SIZE)) * canvas.height * 0.15;
+            const screenY = canvas.height / 2 + verticalOffset + bob - playerZ * 3;
             
             ctx.save();
             ctx.translate(screenX, screenY);
             
-            // Distance fog
-            const fogAmount = Math.min(0.7, dist / (RENDER_DIST * TILE_SIZE));
+            // Distance fog for depth
+            const fogAmount = Math.min(0.8, dist / (RENDER_DIST * TILE_SIZE));
             ctx.globalAlpha = 1 - fogAmount;
             
-            // TRUNK - brown rectangle
-            ctx.fillStyle = tree.type === 'dark' ? '#3a2a1a' : '#5a3a1a';
-            ctx.fillRect(-trunkWidth / 2, -treeHeight * 0.3, trunkWidth, treeHeight * 0.5);
-            
-            // FOLIAGE - green circles/triangles (layered)
-            const foliageColor = tree.type === 'dark' ? '#1a3a1a' : '#2a5a2a';
-            ctx.fillStyle = foliageColor;
-            
-            // Bottom layer
+            // 3D TRUNK - tapered rectangle
+            const trunkColor = tree.type === 'dark' ? '#3a2517' : '#5a3a1a';
+            ctx.fillStyle = trunkColor;
             ctx.beginPath();
-            ctx.moveTo(-foliageSize, -treeHeight * 0.2);
-            ctx.lineTo(0, -treeHeight * 0.6);
-            ctx.lineTo(foliageSize, -treeHeight * 0.2);
+            ctx.moveTo(-trunkWidth * 0.6, 0);
+            ctx.lineTo(-trunkWidth * 0.4, -treeHeight * 0.4);
+            ctx.lineTo(trunkWidth * 0.4, -treeHeight * 0.4);
+            ctx.lineTo(trunkWidth * 0.6, 0);
             ctx.closePath();
             ctx.fill();
             
-            // Middle layer
+            // Trunk highlight (3D effect)
+            ctx.fillStyle = tree.type === 'dark' ? '#4a3527' : '#6a4a2a';
             ctx.beginPath();
-            ctx.moveTo(-foliageSize * 0.8, -treeHeight * 0.45);
-            ctx.lineTo(0, -treeHeight * 0.8);
-            ctx.lineTo(foliageSize * 0.8, -treeHeight * 0.45);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(trunkWidth * 0.3, -treeHeight * 0.35);
+            ctx.lineTo(trunkWidth * 0.5, 0);
             ctx.closePath();
             ctx.fill();
             
-            // Top layer
+            // 3D FOLIAGE - Multiple layered triangles with shading
+            const darkGreen = tree.type === 'dark' ? '#0a2a0a' : '#1a4a1a';
+            const midGreen = tree.type === 'dark' ? '#1a3a1a' : '#2a5a2a';
+            const lightGreen = tree.type === 'dark' ? '#2a4a2a' : '#3a6a3a';
+            
+            // Back/shadow layer
+            ctx.fillStyle = darkGreen;
             ctx.beginPath();
-            ctx.moveTo(-foliageSize * 0.5, -treeHeight * 0.65);
+            ctx.moveTo(-foliageSize * 1.1, -treeHeight * 0.25);
+            ctx.lineTo(0, -treeHeight * 0.7);
+            ctx.lineTo(foliageSize * 1.1, -treeHeight * 0.25);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Middle layer  
+            ctx.fillStyle = midGreen;
+            ctx.beginPath();
+            ctx.moveTo(-foliageSize * 0.9, -treeHeight * 0.4);
+            ctx.lineTo(0, -treeHeight * 0.85);
+            ctx.lineTo(foliageSize * 0.9, -treeHeight * 0.4);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Top layer (brightest)
+            ctx.fillStyle = lightGreen;
+            ctx.beginPath();
+            ctx.moveTo(-foliageSize * 0.6, -treeHeight * 0.55);
             ctx.lineTo(0, -treeHeight);
-            ctx.lineTo(foliageSize * 0.5, -treeHeight * 0.65);
+            ctx.lineTo(foliageSize * 0.6, -treeHeight * 0.55);
             ctx.closePath();
             ctx.fill();
             
-            // Highlight
-            ctx.fillStyle = tree.type === 'dark' ? '#2a4a2a' : '#3a6a3a';
+            // Highlight spots (light hitting leaves)
+            ctx.fillStyle = '#4a8a4a';
+            ctx.globalAlpha *= 0.6;
             ctx.beginPath();
-            ctx.arc(foliageSize * 0.2, -treeHeight * 0.6, foliageSize * 0.15, 0, Math.PI * 2);
+            ctx.arc(foliageSize * 0.25, -treeHeight * 0.65, foliageSize * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(-foliageSize * 0.1, -treeHeight * 0.8, foliageSize * 0.08, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.restore();
@@ -4291,275 +4333,76 @@
     }
     
     function renderSpecialZones(bob) {
-        // NOTE: bob removed from mountains to prevent "jumping" effect
+        // ULTRA-SIMPLE 3D ZONES - NO shadowBlur to prevent freeze
         
-        // Render GLACIER MOUNTAIN - Tall ice mountain that rises from ground
-        if (glacierEntrance) {
-            const dx = glacierEntrance.x * TILE_SIZE - player.x;
-            const dy = glacierEntrance.y * TILE_SIZE - player.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
+        // Helper to render a simple 3D zone
+        function renderZone(entrance, color1, color2, labelText, entranceColor) {
+            if (!entrance) return;
             
-            // PREVENT FREEZE: minimum distance to avoid huge calculations
-            dist = Math.max(dist, TILE_SIZE * 0.5);
+            const dx = entrance.x * TILE_SIZE - player.x;
+            const dy = entrance.y * TILE_SIZE - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
             
-            if (dist < RENDER_DIST * TILE_SIZE * 1.5) {
-                const angleToZone = Math.atan2(dy, dx);
-                let relAngle = angleToZone - player.angle;
-                while (relAngle > Math.PI) relAngle -= Math.PI * 2;
-                while (relAngle < -Math.PI) relAngle += Math.PI * 2;
-                
-                if (Math.abs(relAngle) < FOV / 2 + 0.3) {
-                    const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-                    const mountainHeight = Math.min((TILE_SIZE * 8 / dist) * canvas.height, canvas.height * 2); // CAPPED
-                    const mountainWidth = mountainHeight * 1.2;
-                    const baseY = canvas.height / 2 + Math.min((TILE_SIZE * 0.5 / dist) * canvas.height, canvas.height); // CAPPED
-                    
-                    ctx.save();
-                    ctx.translate(screenX, baseY);
-                    
-                    // TALL ICE MOUNTAIN - multiple layers for depth
-                    // Back layer (darker)
-                    ctx.fillStyle = '#6699bb';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -mountainHeight * 1.1);
-                    ctx.lineTo(-mountainWidth * 0.6, 0);
-                    ctx.lineTo(mountainWidth * 0.6, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Main mountain
-                    ctx.fillStyle = '#88bbdd';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -mountainHeight);
-                    ctx.lineTo(-mountainWidth * 0.5, 0);
-                    ctx.lineTo(mountainWidth * 0.5, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Snow cap
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -mountainHeight);
-                    ctx.lineTo(-mountainWidth * 0.15, -mountainHeight * 0.7);
-                    ctx.lineTo(mountainWidth * 0.15, -mountainHeight * 0.7);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Ice crystals at peak
-                    ctx.fillStyle = '#aaddff';
-                    ctx.shadowColor = '#00ffff';
-                    ctx.shadowBlur = 15;
-                    ctx.beginPath();
-                    ctx.moveTo(0, -mountainHeight * 1.15);
-                    ctx.lineTo(-mountainWidth * 0.05, -mountainHeight);
-                    ctx.lineTo(mountainWidth * 0.05, -mountainHeight);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Cave entrance at base
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = '#003355';
-                    ctx.beginPath();
-                    ctx.ellipse(0, -mountainHeight * 0.1, mountainWidth * 0.12, mountainHeight * 0.15, 0, Math.PI, 0);
-                    ctx.fill();
-                    
-                    // Entrance glow
-                    ctx.fillStyle = 'rgba(0, 200, 255, 0.4)';
-                    ctx.beginPath();
-                    ctx.ellipse(0, -mountainHeight * 0.1, mountainWidth * 0.08, mountainHeight * 0.1, 0, Math.PI, 0);
-                    ctx.fill();
-                    
-                    // Label
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = `bold ${Math.max(14, mountainHeight * 0.08)}px Fredoka One`;
-                    ctx.textAlign = 'center';
-                    ctx.shadowColor = '#000';
-                    ctx.shadowBlur = 5;
-                    const statusText = iceTitanUnlocked ? '❄️ ENTER GLACIER' : `❄️ Kill ${10 - iceEnemiesKilled} Ice enemies`;
-                    ctx.fillText(statusText, 0, mountainHeight * 0.15);
-                    
-                    ctx.restore();
-                }
-            }
+            // Skip if too close (prevents freeze) or too far
+            if (dist < TILE_SIZE * 2 || dist > RENDER_DIST * TILE_SIZE) return;
+            
+            const angleToZone = Math.atan2(dy, dx);
+            let relAngle = angleToZone - player.angle;
+            while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+            while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+            
+            if (Math.abs(relAngle) > FOV / 2 + 0.2) return;
+            
+            const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+            const size = Math.min(300, (TILE_SIZE * 4 / dist) * 300);
+            const baseY = canvas.height / 2 + size * 0.3;
+            
+            ctx.save();
+            ctx.translate(screenX, baseY);
+            
+            // Simple 3D mountain shape (NO shadows)
+            ctx.fillStyle = color1;
+            ctx.beginPath();
+            ctx.moveTo(0, -size);
+            ctx.lineTo(-size * 0.6, 0);
+            ctx.lineTo(size * 0.6, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Lighter front face
+            ctx.fillStyle = color2;
+            ctx.beginPath();
+            ctx.moveTo(0, -size);
+            ctx.lineTo(-size * 0.4, 0);
+            ctx.lineTo(size * 0.4, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Entrance opening
+            ctx.fillStyle = entranceColor;
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.1, size * 0.15, Math.PI, 0);
+            ctx.fill();
+            
+            // Label (no shadow)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${Math.max(10, size * 0.08)}px Fredoka One`;
+            ctx.textAlign = 'center';
+            ctx.fillText(labelText, 0, size * 0.2);
+            
+            ctx.restore();
         }
         
-        // Render VOLCANO MOUNTAIN - Tall fiery mountain
-        if (volcanoEntrance) {
-            const dx = volcanoEntrance.x * TILE_SIZE - player.x;
-            const dy = volcanoEntrance.y * TILE_SIZE - player.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            
-            // PREVENT FREEZE: minimum distance to avoid huge calculations
-            dist = Math.max(dist, TILE_SIZE * 0.5);
-            
-            if (dist < RENDER_DIST * TILE_SIZE * 1.5) {
-                const angleToZone = Math.atan2(dy, dx);
-                let relAngle = angleToZone - player.angle;
-                while (relAngle > Math.PI) relAngle -= Math.PI * 2;
-                while (relAngle < -Math.PI) relAngle += Math.PI * 2;
-                
-                if (Math.abs(relAngle) < FOV / 2 + 0.3) {
-                    const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-                    const mountainHeight = Math.min((TILE_SIZE * 8 / dist) * canvas.height, canvas.height * 2); // CAPPED
-                    const mountainWidth = mountainHeight * 1.3;
-                    const baseY = canvas.height / 2 + Math.min((TILE_SIZE * 0.5 / dist) * canvas.height, canvas.height); // CAPPED
-                    
-                    ctx.save();
-                    ctx.translate(screenX, baseY);
-                    
-                    // TALL VOLCANO - dark rocky mountain
-                    // Back layer
-                    ctx.fillStyle = '#2a1a0a';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -mountainHeight * 1.05);
-                    ctx.lineTo(-mountainWidth * 0.55, 0);
-                    ctx.lineTo(mountainWidth * 0.55, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Main volcano body
-                    ctx.fillStyle = '#3a2515';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -mountainHeight);
-                    ctx.lineTo(-mountainWidth * 0.5, 0);
-                    ctx.lineTo(mountainWidth * 0.5, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Crater at top
-                    ctx.fillStyle = '#1a0a00';
-                    ctx.beginPath();
-                    ctx.ellipse(0, -mountainHeight * 0.95, mountainWidth * 0.1, mountainHeight * 0.03, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // LAVA GLOW from crater
-                    ctx.fillStyle = '#ff4400';
-                    ctx.shadowColor = '#ff6600';
-                    ctx.shadowBlur = 40;
-                    ctx.beginPath();
-                    ctx.ellipse(0, -mountainHeight * 0.92, mountainWidth * 0.08, mountainHeight * 0.02, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Animated smoke/fire from top
-                    const smokeOffset = Math.sin(Date.now() * 0.003) * 5;
-                    ctx.fillStyle = 'rgba(255, 100, 0, 0.6)';
-                    ctx.beginPath();
-                    ctx.ellipse(smokeOffset, -mountainHeight * 1.05, mountainWidth * 0.06, mountainHeight * 0.08, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Lava streams down the side
-                    ctx.strokeStyle = '#ff6600';
-                    ctx.shadowBlur = 15;
-                    ctx.lineWidth = 4;
-                    ctx.beginPath();
-                    ctx.moveTo(-mountainWidth * 0.02, -mountainHeight * 0.9);
-                    ctx.quadraticCurveTo(-mountainWidth * 0.15, -mountainHeight * 0.5, -mountainWidth * 0.25, 0);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(mountainWidth * 0.03, -mountainHeight * 0.9);
-                    ctx.quadraticCurveTo(mountainWidth * 0.2, -mountainHeight * 0.4, mountainWidth * 0.35, 0);
-                    ctx.stroke();
-                    
-                    // Cave entrance at base
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = '#0a0500';
-                    ctx.beginPath();
-                    ctx.ellipse(0, -mountainHeight * 0.08, mountainWidth * 0.1, mountainHeight * 0.12, 0, Math.PI, 0);
-                    ctx.fill();
-                    
-                    // Lava glow at entrance
-                    ctx.fillStyle = 'rgba(255, 100, 0, 0.5)';
-                    ctx.beginPath();
-                    ctx.ellipse(0, -mountainHeight * 0.08, mountainWidth * 0.06, mountainHeight * 0.08, 0, Math.PI, 0);
-                    ctx.fill();
-                    
-                    // Label
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = `bold ${Math.max(14, mountainHeight * 0.08)}px Fredoka One`;
-                    ctx.textAlign = 'center';
-                    ctx.shadowColor = '#000';
-                    ctx.shadowBlur = 5;
-                    const statusText = fireLordUnlocked ? '🌋 ENTER VOLCANO' : `🔥 Kill ${10 - fireEnemiesKilled} Fire enemies`;
-                    ctx.fillText(statusText, 0, mountainHeight * 0.15);
-                    
-                    ctx.restore();
-                }
-            }
-        }
+        // Render Glacier
+        const glacierLabel = iceTitanUnlocked ? '❄️ ENTER GLACIER' : `❄️ ${10 - iceEnemiesKilled} kills needed`;
+        renderZone(glacierEntrance, '#6699bb', '#99ccee', glacierLabel, '#003366');
         
-        // Render MINE ENTRANCE ROCK - glowing crystal to enter caves
-        if (mineEntranceRock) {
-            const dx = mineEntranceRock.x * TILE_SIZE - player.x;
-            const dy = mineEntranceRock.y * TILE_SIZE - player.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            
-            // PREVENT FREEZE: minimum distance
-            dist = Math.max(dist, TILE_SIZE * 0.3);
-            
-            if (dist < RENDER_DIST * TILE_SIZE) {
-                const angleToRock = Math.atan2(dy, dx);
-                let relAngle = angleToRock - player.angle;
-                while (relAngle > Math.PI) relAngle -= Math.PI * 2;
-                while (relAngle < -Math.PI) relAngle += Math.PI * 2;
-                
-                if (Math.abs(relAngle) < FOV / 2 + 0.3) {
-                    const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-                    const rockSize = Math.min((TILE_SIZE * 2 / dist) * canvas.height, canvas.height); // CAPPED
-                    const baseY = canvas.height / 2 + Math.min((TILE_SIZE * 0.3 / dist) * canvas.height, canvas.height * 0.5); // CAPPED
-                    
-                    ctx.save();
-                    ctx.translate(screenX, baseY);
-                    
-                    // Glowing crystal rock formation
-                    const glowPulse = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
-                    
-                    // Rock base
-                    ctx.fillStyle = '#444444';
-                    ctx.beginPath();
-                    ctx.ellipse(0, rockSize * 0.1, rockSize * 0.4, rockSize * 0.2, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Crystal formations
-                    ctx.fillStyle = `rgba(150, 100, 255, ${glowPulse})`;
-                    ctx.shadowColor = '#aa66ff';
-                    ctx.shadowBlur = 25;
-                    
-                    // Center crystal
-                    ctx.beginPath();
-                    ctx.moveTo(0, -rockSize * 0.8);
-                    ctx.lineTo(-rockSize * 0.15, rockSize * 0.1);
-                    ctx.lineTo(rockSize * 0.15, rockSize * 0.1);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Side crystals
-                    ctx.beginPath();
-                    ctx.moveTo(-rockSize * 0.25, -rockSize * 0.5);
-                    ctx.lineTo(-rockSize * 0.35, rockSize * 0.1);
-                    ctx.lineTo(-rockSize * 0.15, rockSize * 0.1);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(rockSize * 0.25, -rockSize * 0.5);
-                    ctx.lineTo(rockSize * 0.15, rockSize * 0.1);
-                    ctx.lineTo(rockSize * 0.35, rockSize * 0.1);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Label
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = `bold ${Math.max(12, rockSize * 0.12)}px Fredoka One`;
-                    ctx.textAlign = 'center';
-                    ctx.shadowColor = '#000';
-                    ctx.shadowBlur = 5;
-                    ctx.fillText('⛏️ MINE ENTRANCE', 0, rockSize * 0.35);
-                    
-                    ctx.restore();
-                }
-            }
-        }
+        // Render Volcano  
+        const volcanoLabel = fireLordUnlocked ? '🌋 ENTER VOLCANO' : `🔥 ${10 - fireEnemiesKilled} kills needed`;
+        renderZone(volcanoEntrance, '#4a2a1a', '#6a4030', volcanoLabel, '#ff3300');
+        
+        // Render Mine Rock
+        renderZone(mineEntranceRock, '#444466', '#6666aa', '⛏️ MINE ENTRANCE', '#220044');
     }
     
     function renderResourceNodes(bob) {
