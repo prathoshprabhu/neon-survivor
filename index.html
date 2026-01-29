@@ -7,6 +7,7 @@
     <link rel="icon" type="image/jpeg" href="logo.jpg">
     <link rel="apple-touch-icon" href="logo.jpg">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -847,7 +848,7 @@
     const TILE_SIZE = 64;
     let MAP_SIZE = 32; // Starting size, will grow
     const FOV = Math.PI / 3;
-    const RENDER_DIST = 10; // Minimal for maximum performance
+    const RENDER_DIST = 8; // Reduced for maximum performance
     let mapOffsetX = 0; // For infinite maze
     let mapOffsetY = 0;
     
@@ -1464,8 +1465,8 @@
                 const biome = biomeMap[y][x];
                 
                 if (biome === 'forest' || biome === 'darkforest') {
-                    // Abundant trees
-                    if (Math.random() < 0.08) {
+                    // Abundant trees - capped for performance
+                    if (Math.random() < 0.04 && trees.length < 50) {
                         trees.push({
                             x: (x + 0.5) * TILE_SIZE,
                             y: (y + 0.5) * TILE_SIZE,
@@ -2370,11 +2371,22 @@
     function gameLoop(currentTime) {
         if (!gameRunning) return;
         
-        // Skip frame if too soon (cap at ~60fps to prevent overload)
-        if (currentTime - lastFrameTime < 16) {
+        // Cap at 30fps for stability on slower devices
+        const frameTime = 33; // ~30fps
+        if (currentTime - lastFrameTime < frameTime) {
             requestAnimationFrame(gameLoop);
             return;
         }
+        
+        // Skip frames if we're way behind
+        const delta = currentTime - lastFrameTime;
+        if (delta > 100) {
+            // We're too far behind, skip to catch up
+            lastFrameTime = currentTime;
+            requestAnimationFrame(gameLoop);
+            return;
+        }
+        
         lastFrameTime = currentTime;
         
         try {
@@ -2382,7 +2394,6 @@
             render();
         } catch (e) {
             console.error('Game error:', e);
-            // Continue running despite errors
         }
         
         requestAnimationFrame(gameLoop);
@@ -2913,8 +2924,11 @@
     }
     
     function spawnEnemy() {
+        // Limit max enemies for performance
+        if (enemies.length >= 8) return;
+        
         let attempts = 0;
-        while (attempts < 50) {
+        while (attempts < 30) {
             const x = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             const y = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
             
@@ -3666,7 +3680,7 @@
             dist: Math.sqrt((e.x - player.x) ** 2 + (e.y - player.y) ** 2)
         })).filter(e => e.dist < RENDER_DIST * TILE_SIZE)
           .sort((a, b) => a.dist - b.dist)
-          .slice(0, 10); // MAX 10 enemies for performance
+          .slice(0, 6); // MAX 6 enemies for performance
         
         for (const enemy of sortedEnemies) {
             const dx = enemy.x - player.x;
@@ -3980,7 +3994,7 @@
             dist: Math.sqrt((t.x - player.x) ** 2 + (t.y - player.y) ** 2)
         })).filter(t => t.dist < RENDER_DIST * TILE_SIZE && t.dist > TILE_SIZE * 0.5)
           .sort((a, b) => a.dist - b.dist) // Near to far for limiting
-          .slice(0, 15); // MAX 15 trees for performance
+          .slice(0, 8); // MAX 8 trees for performance
         
         for (const tree of sortedTrees) {
             const dx = tree.x - player.x;
