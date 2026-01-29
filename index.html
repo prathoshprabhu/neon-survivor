@@ -184,6 +184,16 @@
             box-shadow: 0 0 15px rgba(0, 221, 255, 0.3);
         }
         
+        #playerIdHud {
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,15,20,0.8);
+            padding: 8px 15px;
+            border-radius: 6px;
+            border: 1px solid #00aa88;
+            text-align: right;
+        }
+        
         #petHud {
             top: 150px;
             left: 20px;
@@ -664,6 +674,12 @@
         <div style="font-size: 10px;">XP: <span id="baseExp">0</span>/100</div>
     </div>
     
+    <div id="playerIdHud" class="hud">
+        <div style="font-size: 10px; color: #888;">OPERATOR</div>
+        <div id="playerId" style="font-size: 14px; color: #00ffaa; font-family: 'Orbitron', monospace;">PLR-XXXXXX</div>
+        <div style="font-size: 9px; color: #666;">SKIN: <span id="skinName">Standard</span></div>
+    </div>
+    
     <div id="scoreHud" class="hud">
         <div class="score-label">SCORE</div>
         <div class="score-value" id="scoreVal">0</div>
@@ -835,14 +851,32 @@
     let refiners = []; // Mineral refiners
     
     const WEAPONS = [
-        { id: 0, name: 'Revolver', icon: '🔫', damage: 25, fireRate: 400, ammo: 1, range: 15, unlocked: true },
-        { id: 1, name: 'Knife', icon: '🔪', damage: 50, fireRate: 200, ammo: 0, range: 1.5, unlocked: false, melee: true },
-        { id: 2, name: '.44 Magnum', icon: '💥', damage: 60, fireRate: 600, ammo: 1, range: 18, unlocked: false },
-        { id: 3, name: 'Rifle', icon: '🔫', damage: 20, fireRate: 100, ammo: 1, range: 20, unlocked: false },
-        { id: 4, name: 'Sniper', icon: '🎯', damage: 150, fireRate: 1200, ammo: 1, range: 25, unlocked: false },
-        { id: 5, name: 'Katana', icon: '⚔️', damage: 80, fireRate: 300, ammo: 0, range: 2, unlocked: false, melee: true },
-        { id: 6, name: 'Railgun', icon: '⚡', damage: 200, fireRate: 2000, ammo: 5, range: 30, unlocked: false },
+        { id: 0, name: 'Revolver', icon: '🔫', damage: 25, fireRate: 400, ammo: 1, range: 15, unlocked: true, gunType: 'pistol' },
+        { id: 1, name: 'Knife', icon: '🔪', damage: 50, fireRate: 200, ammo: 0, range: 1.5, unlocked: false, melee: true, gunType: 'knife' },
+        { id: 2, name: '.44 Magnum', icon: '💥', damage: 60, fireRate: 600, ammo: 1, range: 18, unlocked: false, gunType: 'pistol' },
+        { id: 3, name: 'Rifle', icon: '🔫', damage: 20, fireRate: 100, ammo: 1, range: 20, unlocked: false, gunType: 'rifle' },
+        { id: 4, name: 'Sniper', icon: '🎯', damage: 150, fireRate: 1200, ammo: 1, range: 25, unlocked: false, gunType: 'sniper' },
+        { id: 5, name: 'Katana', icon: '⚔️', damage: 80, fireRate: 300, ammo: 0, range: 2, unlocked: false, melee: true, gunType: 'katana' },
+        { id: 6, name: 'Railgun', icon: '⚡', damage: 200, fireRate: 2000, ammo: 5, range: 30, unlocked: false, gunType: 'railgun' },
     ];
+    
+    // Player ID System
+    let playerID = 'PLR-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    
+    // Zoom/Perspective System
+    let zoomLevel = 1.0; // 1.0 = first person, 0.5 = zoomed out
+    const MIN_ZOOM = 0.5;
+    const MAX_ZOOM = 2.0;
+    
+    // Skins based on perspective
+    const PLAYER_SKINS = {
+        default: { name: 'Standard', color: '#00ffaa', accent: '#00ddff' },
+        neon: { name: 'Neon', color: '#ff00ff', accent: '#00ffff' },
+        military: { name: 'Military', color: '#556644', accent: '#88aa66' },
+        cyber: { name: 'Cyber', color: '#ff4400', accent: '#ffaa00' },
+        stealth: { name: 'Stealth', color: '#222222', accent: '#444444' }
+    };
+    let currentSkin = 'default';
     
     const PETS = {
         common: [
@@ -1692,21 +1726,36 @@
         
         // Edge turning removed - use double-click for pointer lock or Q/E keys
         
-        // Mouse wheel to switch weapons
+        // Mouse wheel - Ctrl+wheel for zoom, regular wheel for weapons
         canvas.addEventListener('wheel', e => {
             if (!gameRunning) return;
             e.preventDefault();
             
-            let newWeapon = player.weapon + (e.deltaY > 0 ? 1 : -1);
-            // Find next unlocked weapon
-            for (let i = 0; i < WEAPONS.length; i++) {
-                const idx = (newWeapon + WEAPONS.length) % WEAPONS.length;
-                if (WEAPONS[idx].unlocked) {
-                    player.weapon = idx;
-                    updateWeaponHud();
-                    break;
+            if (e.ctrlKey || e.metaKey) {
+                // Zoom in/out (changes perspective)
+                zoomLevel += e.deltaY > 0 ? -0.1 : 0.1;
+                zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel));
+                
+                // Change skin based on zoom level
+                if (zoomLevel < 0.7) currentSkin = 'stealth';
+                else if (zoomLevel < 1.0) currentSkin = 'military';
+                else if (zoomLevel < 1.3) currentSkin = 'default';
+                else if (zoomLevel < 1.7) currentSkin = 'neon';
+                else currentSkin = 'cyber';
+                
+                showNotification(`Zoom: ${Math.round(zoomLevel * 100)}% | Skin: ${PLAYER_SKINS[currentSkin].name}`);
+            } else {
+                // Switch weapons
+                let newWeapon = player.weapon + (e.deltaY > 0 ? 1 : -1);
+                for (let i = 0; i < WEAPONS.length; i++) {
+                    const idx = (newWeapon + WEAPONS.length) % WEAPONS.length;
+                    if (WEAPONS[idx].unlocked) {
+                        player.weapon = idx;
+                        updateWeaponHud();
+                        break;
+                    }
+                    newWeapon += (e.deltaY > 0 ? 1 : -1);
                 }
-                newWeapon += (e.deltaY > 0 ? 1 : -1);
             }
         }, { passive: false });
         
@@ -1823,6 +1872,36 @@
                 if (dist < 100) {
                     shoot();
                 }
+            }
+        });
+        
+        // Pinch to zoom for iPad/touch devices
+        let lastPinchDist = 0;
+        canvas.addEventListener('touchmove', e => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const pinchDist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (lastPinchDist > 0) {
+                    const delta = pinchDist - lastPinchDist;
+                    zoomLevel += delta * 0.005;
+                    zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel));
+                    
+                    // Change skin based on zoom
+                    if (zoomLevel < 0.7) currentSkin = 'stealth';
+                    else if (zoomLevel < 1.0) currentSkin = 'military';
+                    else if (zoomLevel < 1.3) currentSkin = 'default';
+                    else if (zoomLevel < 1.7) currentSkin = 'neon';
+                    else currentSkin = 'cyber';
+                }
+                lastPinchDist = pinchDist;
+            }
+        }, { passive: true });
+        
+        canvas.addEventListener('touchend', e => {
+            if (e.touches.length < 2) {
+                lastPinchDist = 0;
             }
         });
     }
@@ -3657,42 +3736,164 @@
     
     function renderWeapon(bob) {
         const weapon = WEAPONS[player.weapon];
-        const weaponY = canvas.height - 200 + bob + (player.shooting ? -20 + player.shootFrame * 4 : 0);
-        const weaponX = canvas.width / 2;
+        const skin = PLAYER_SKINS[currentSkin];
+        const recoil = player.shooting ? -20 + player.shootFrame * 4 : 0;
+        const weaponY = canvas.height - 180 + bob + recoil;
+        const weaponX = canvas.width / 2 + 80;
         
         ctx.save();
         ctx.translate(weaponX, weaponY);
         
-        ctx.fillStyle = '#2a2a35';
-        ctx.shadowColor = '#00f7ff';
-        ctx.shadowBlur = player.shooting ? 30 : 10;
+        // Gun glow based on skin
+        ctx.shadowColor = skin.accent;
+        ctx.shadowBlur = player.shooting ? 25 : 8;
         
-        ctx.beginPath();
-        ctx.roundRect(-40, 0, 80, 120, 8);
-        ctx.fill();
+        const gunType = weapon.gunType || 'pistol';
         
-        ctx.fillStyle = '#1a1a20';
-        ctx.fillRect(-15, -60, 30, 70);
-        
-        if (player.shooting && player.shootFrame < 5) {
-            ctx.fillStyle = '#ff6a00';
-            ctx.shadowColor = '#ff6a00';
-            ctx.shadowBlur = Math.min(40, MAX_SHADOW_BLUR);
+        if (gunType === 'pistol') {
+            // PISTOL - compact handgun
+            ctx.fillStyle = '#1a1a22';
+            // Grip
+            ctx.fillRect(-15, 20, 30, 60);
+            // Body
+            ctx.fillStyle = '#2a2a35';
+            ctx.fillRect(-20, -20, 45, 45);
+            // Barrel
+            ctx.fillStyle = '#333340';
+            ctx.fillRect(-5, -70, 15, 55);
+            // Trigger guard
+            ctx.strokeStyle = '#444455';
+            ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.moveTo(0, -80);
-            ctx.lineTo(-20, -60);
-            ctx.lineTo(20, -60);
+            ctx.arc(0, 35, 12, 0, Math.PI);
+            ctx.stroke();
+            // Sight
+            ctx.fillStyle = skin.accent;
+            ctx.fillRect(0, -75, 6, 8);
+            
+        } else if (gunType === 'rifle') {
+            // RIFLE - long barrel
+            ctx.fillStyle = '#1a1a22';
+            // Stock
+            ctx.fillRect(-30, 30, 25, 70);
+            // Body
+            ctx.fillStyle = '#2a2a35';
+            ctx.fillRect(-25, -10, 55, 45);
+            // Long barrel
+            ctx.fillStyle = '#333340';
+            ctx.fillRect(-5, -120, 12, 115);
+            // Magazine
+            ctx.fillStyle = '#222230';
+            ctx.fillRect(10, 10, 18, 40);
+            // Scope
+            ctx.fillStyle = skin.accent;
+            ctx.fillRect(-2, -90, 8, 25);
+            
+        } else if (gunType === 'sniper') {
+            // SNIPER - very long with scope
+            ctx.fillStyle = '#1a1a22';
+            // Stock
+            ctx.fillRect(-35, 25, 30, 80);
+            // Body
+            ctx.fillStyle = '#2a2a35';
+            ctx.fillRect(-30, -15, 60, 45);
+            // Very long barrel
+            ctx.fillStyle = '#333340';
+            ctx.fillRect(-3, -160, 10, 150);
+            // Large scope
+            ctx.fillStyle = '#222235';
+            ctx.fillRect(-8, -120, 20, 60);
+            ctx.fillStyle = skin.accent;
+            ctx.beginPath();
+            ctx.arc(2, -90, 8, 0, Math.PI * 2);
+            ctx.fill();
+            // Bipod legs
+            ctx.strokeStyle = '#444455';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-10, 30);
+            ctx.lineTo(-25, 80);
+            ctx.moveTo(15, 30);
+            ctx.lineTo(30, 80);
+            ctx.stroke();
+            
+        } else if (gunType === 'railgun') {
+            // RAILGUN - futuristic energy weapon
+            ctx.fillStyle = '#1a1a25';
+            // Body
+            ctx.fillRect(-25, -10, 55, 50);
+            // Energy core
+            const pulse = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
+            ctx.fillStyle = `rgba(0, 255, 255, ${pulse})`;
+            ctx.fillRect(-15, 0, 35, 30);
+            // Rails
+            ctx.fillStyle = '#444455';
+            ctx.fillRect(-8, -140, 6, 135);
+            ctx.fillRect(8, -140, 6, 135);
+            // Energy glow
+            ctx.fillStyle = skin.accent;
+            ctx.shadowBlur = 20;
+            ctx.fillRect(-2, -130, 10, 120);
+            // Grip
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#222230';
+            ctx.fillRect(-12, 40, 28, 50);
+            
+        } else if (gunType === 'knife') {
+            // KNIFE - blade
+            ctx.fillStyle = '#666677';
+            // Blade
+            ctx.beginPath();
+            ctx.moveTo(0, -100);
+            ctx.lineTo(-15, -20);
+            ctx.lineTo(15, -20);
+            ctx.closePath();
+            ctx.fill();
+            // Handle
+            ctx.fillStyle = '#332222';
+            ctx.fillRect(-10, -20, 20, 60);
+            // Edge shine
+            ctx.fillStyle = skin.accent;
+            ctx.fillRect(-2, -90, 4, 70);
+            
+        } else if (gunType === 'katana') {
+            // KATANA - curved blade
+            ctx.fillStyle = '#888899';
+            ctx.beginPath();
+            ctx.moveTo(5, -150);
+            ctx.quadraticCurveTo(-20, -80, -10, -20);
+            ctx.lineTo(10, -20);
+            ctx.quadraticCurveTo(0, -80, 15, -150);
+            ctx.closePath();
+            ctx.fill();
+            // Handle wrap
+            ctx.fillStyle = '#220000';
+            ctx.fillRect(-8, -20, 16, 70);
+            // Guard
+            ctx.fillStyle = '#aa8800';
+            ctx.fillRect(-20, -25, 40, 8);
+        }
+        
+        // Muzzle flash
+        if (player.shooting && player.shootFrame < 5 && !weapon.melee) {
+            ctx.fillStyle = '#ffaa00';
+            ctx.shadowColor = '#ff6600';
+            ctx.shadowBlur = 30;
+            ctx.beginPath();
+            ctx.moveTo(0, -180);
+            ctx.lineTo(-25, -130);
+            ctx.lineTo(25, -130);
             ctx.closePath();
             ctx.fill();
         }
         
-        ctx.shadowBlur = 0;
-        ctx.font = '40px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#fff';
-        ctx.fillText(weapon.icon, 0, 80);
-        
         ctx.restore();
+        
+        // Weapon ID display
+        ctx.fillStyle = skin.accent;
+        ctx.font = '12px Orbitron, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(`[${weapon.id}] ${weapon.name}`, canvas.width - 20, canvas.height - 20);
     }
     
     function renderMinimap() {
@@ -4053,6 +4254,10 @@
         document.getElementById('baseExp').textContent = baseExp;
         
         document.getElementById('diamondVal').textContent = diamondsCollected;
+        
+        // Player ID and Skin
+        document.getElementById('playerId').textContent = playerID;
+        document.getElementById('skinName').textContent = PLAYER_SKINS[currentSkin].name;
         
         // Update current biome display
         const playerTileX = Math.floor(player.x / TILE_SIZE);
