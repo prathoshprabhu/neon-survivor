@@ -682,6 +682,11 @@
         <div style="font-size: 10px; color: rgba(255,255,255,0.6);">XP: <span id="baseExp">0</span>/100</div>
     </div>
     
+    <div id="rescueHud" class="hud" style="top: 160px; left: 20px; background: rgba(35,37,39,0.9); padding: 10px 15px; border-radius: 8px; border: 2px solid #ff6666;">
+        <div style="color: #ff6666; font-size: 14px;">🙋 RESCUE: <span id="peopleSaved">0</span>/5</div>
+        <div style="font-size: 10px; color: rgba(255,255,255,0.6);">Night bonus: <span id="nightBonus">0</span>s</div>
+    </div>
+    
     <div id="playerIdHud" class="hud">
         <div style="font-size: 10px; color: rgba(255,255,255,0.6);">PLAYER</div>
         <div id="playerId" style="font-size: 14px; color: #00d460; font-family: 'Fredoka One', cursive;">Player12345</div>
@@ -850,6 +855,13 @@
     // Mine entrance
     let mineEntranceRock = null;
     const BASE_EXP_PER_LEVEL = 100;
+    
+    // RESCUE SYSTEM - Lost people in forest
+    let lostPeople = [];
+    let peopleSaved = 0;
+    const TOTAL_PEOPLE_TO_SAVE = 5;
+    const TIME_BONUS_PER_RESCUE = 30000; // 30 seconds faster nights
+    let nightTimeReduction = 0; // Total time saved
     
     // Crafting & Resources
     const RAW_RESOURCES = {
@@ -1384,6 +1396,44 @@
         
         // Spawn stone/ore nodes
         spawnResourceNodes();
+        
+        // Spawn LOST PEOPLE in forest - 5 people to rescue
+        lostPeople = [];
+        peopleSaved = 0;
+        nightTimeReduction = 0;
+        for (let i = 0; i < TOTAL_PEOPLE_TO_SAVE; i++) {
+            let attempts = 0;
+            while (attempts < 50) {
+                const px = 5 + Math.floor(Math.random() * (MAP_SIZE - 10));
+                const py = 5 + Math.floor(Math.random() * (MAP_SIZE - 10));
+                const biome = biomeMap[py] && biomeMap[py][px];
+                
+                // Only spawn in forest biomes, not too close to spawn
+                if ((biome === 'forest' || biome === 'darkforest') && 
+                    map[py][px] === 0 &&
+                    Math.abs(px - MAP_SIZE/2) > 10 && Math.abs(py - MAP_SIZE/2) > 10) {
+                    
+                    // Random person appearance
+                    const skinColors = ['#ffcc99', '#dda877', '#c68642', '#8d5524', '#ffdbac'];
+                    const shirtColors = ['#ff4444', '#4444ff', '#44ff44', '#ffff44', '#ff44ff', '#44ffff', '#ff8800'];
+                    const names = ['Alex', 'Sam', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Quinn'];
+                    
+                    lostPeople.push({
+                        x: (px + 0.5) * TILE_SIZE,
+                        y: (py + 0.5) * TILE_SIZE,
+                        name: names[Math.floor(Math.random() * names.length)],
+                        skinColor: skinColors[Math.floor(Math.random() * skinColors.length)],
+                        shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+                        pantsColor: '#3366aa',
+                        saved: false,
+                        wavePhase: Math.random() * Math.PI * 2, // For waving animation
+                        bobPhase: Math.random() * Math.PI * 2
+                    });
+                    break;
+                }
+                attempts++;
+            }
+        }
         
         // Clear spawn area
         const spawnX = Math.floor(MAP_SIZE / 2);
@@ -2204,59 +2254,83 @@
         // Update weather system
         updateWeather();
         
-        // Player movement - SMOOTH and FAST
-        const baseSpeed = 6;
+        // Player movement - ROBLOX-STYLE with smooth acceleration
+        const baseSpeed = 7;
         const speedMult = getPetBonus('speed');
-        const sprintMult = keys['shift'] ? 1.8 : 1;
-        const moveSpeed = baseSpeed * speedMult * sprintMult;
-        let dx = 0, dy = 0;
+        const sprintMult = keys['shift'] ? 1.6 : 1;
+        const targetSpeed = baseSpeed * speedMult * sprintMult;
+        
+        // Smooth acceleration/deceleration like Roblox
+        if (!player.velX) player.velX = 0;
+        if (!player.velY) player.velY = 0;
+        const accel = 0.4; // How fast to reach target speed
+        const friction = 0.85; // How fast to slow down
+        
+        let targetDx = 0, targetDy = 0;
         
         // Movement based on selected control scheme
         if (controlScheme === 'wasd') {
             // WASD controls
             if (keys['w']) {
-                dx += Math.cos(player.angle) * moveSpeed;
-                dy += Math.sin(player.angle) * moveSpeed;
+                targetDx += Math.cos(player.angle) * targetSpeed;
+                targetDy += Math.sin(player.angle) * targetSpeed;
             }
             if (keys['s']) {
-                dx -= Math.cos(player.angle) * moveSpeed;
-                dy -= Math.sin(player.angle) * moveSpeed;
+                targetDx -= Math.cos(player.angle) * targetSpeed;
+                targetDy -= Math.sin(player.angle) * targetSpeed;
             }
             if (keys['a']) {
-                dx += Math.cos(player.angle - Math.PI/2) * moveSpeed;
-                dy += Math.sin(player.angle - Math.PI/2) * moveSpeed;
+                targetDx += Math.cos(player.angle - Math.PI/2) * targetSpeed;
+                targetDy += Math.sin(player.angle - Math.PI/2) * targetSpeed;
             }
             if (keys['d']) {
-                dx += Math.cos(player.angle + Math.PI/2) * moveSpeed;
-                dy += Math.sin(player.angle + Math.PI/2) * moveSpeed;
+                targetDx += Math.cos(player.angle + Math.PI/2) * targetSpeed;
+                targetDy += Math.sin(player.angle + Math.PI/2) * targetSpeed;
             }
         } else {
             // Arrow key controls
             if (keys['arrowup']) {
-                dx += Math.cos(player.angle) * moveSpeed;
-                dy += Math.sin(player.angle) * moveSpeed;
+                targetDx += Math.cos(player.angle) * targetSpeed;
+                targetDy += Math.sin(player.angle) * targetSpeed;
             }
             if (keys['arrowdown']) {
-                dx -= Math.cos(player.angle) * moveSpeed;
-                dy -= Math.sin(player.angle) * moveSpeed;
+                targetDx -= Math.cos(player.angle) * targetSpeed;
+                targetDy -= Math.sin(player.angle) * targetSpeed;
             }
             if (keys['arrowleft']) {
-                dx += Math.cos(player.angle - Math.PI/2) * moveSpeed;
-                dy += Math.sin(player.angle - Math.PI/2) * moveSpeed;
+                targetDx += Math.cos(player.angle - Math.PI/2) * targetSpeed;
+                targetDy += Math.sin(player.angle - Math.PI/2) * targetSpeed;
             }
             if (keys['arrowright']) {
-                dx += Math.cos(player.angle + Math.PI/2) * moveSpeed;
-                dy += Math.sin(player.angle + Math.PI/2) * moveSpeed;
+                targetDx += Math.cos(player.angle + Math.PI/2) * targetSpeed;
+                targetDy += Math.sin(player.angle + Math.PI/2) * targetSpeed;
             }
         }
         
         // Touch movement
         if (touch.moveX !== 0 || touch.moveY !== 0) {
-            dx += Math.cos(player.angle) * (-touch.moveY) * moveSpeed;
-            dy += Math.sin(player.angle) * (-touch.moveY) * moveSpeed;
-            dx += Math.cos(player.angle + Math.PI/2) * touch.moveX * moveSpeed;
-            dy += Math.sin(player.angle + Math.PI/2) * touch.moveX * moveSpeed;
+            targetDx += Math.cos(player.angle) * (-touch.moveY) * targetSpeed;
+            targetDy += Math.sin(player.angle) * (-touch.moveY) * targetSpeed;
+            targetDx += Math.cos(player.angle + Math.PI/2) * touch.moveX * targetSpeed;
+            targetDy += Math.sin(player.angle + Math.PI/2) * touch.moveX * targetSpeed;
         }
+        
+        // Apply smooth acceleration (Roblox-style)
+        if (targetDx !== 0 || targetDy !== 0) {
+            // Accelerate towards target
+            player.velX += (targetDx - player.velX) * accel;
+            player.velY += (targetDy - player.velY) * accel;
+        } else {
+            // Apply friction when not moving
+            player.velX *= friction;
+            player.velY *= friction;
+            // Stop if very slow
+            if (Math.abs(player.velX) < 0.1) player.velX = 0;
+            if (Math.abs(player.velY) < 0.1) player.velY = 0;
+        }
+        
+        const dx = player.velX;
+        const dy = player.velY;
         
         // Collision detection - check multiple points around the player
         const newX = player.x + dx;
@@ -2359,6 +2433,34 @@
                     if (distToVolcano < TILE_SIZE * 1.5 && Date.now() % 2000 < 50) {
                         showNotification(`🔥 Kill ${10 - fireEnemiesKilled} more Fire enemies to enter!`);
                     }
+                }
+            }
+        }
+        
+        // RESCUE LOST PEOPLE - walk near them to save
+        for (const person of lostPeople) {
+            if (person.saved) continue;
+            
+            const distToPerson = Math.sqrt(
+                (player.x - person.x) ** 2 + (player.y - person.y) ** 2
+            );
+            
+            if (distToPerson < TILE_SIZE * 1.5) {
+                person.saved = true;
+                peopleSaved++;
+                nightTimeReduction += TIME_BONUS_PER_RESCUE;
+                
+                const remaining = TOTAL_PEOPLE_TO_SAVE - peopleSaved;
+                showNotification(`🙋 ${person.name} RESCUED! Nights 30s shorter! (${remaining} left)`);
+                
+                // Bonus rewards
+                player.coins += 100;
+                player.score += 500;
+                baseExp += 20;
+                
+                if (peopleSaved >= TOTAL_PEOPLE_TO_SAVE) {
+                    showNotification('🎉 ALL PEOPLE RESCUED! Hero Bonus: +1000 coins!');
+                    player.coins += 1000;
                 }
             }
         }
@@ -2503,8 +2605,10 @@
         // Update enemies
         updateEnemies();
         
-        // Day/Night cycle
-        const cycleTime = (now - cycleTimer) % FULL_CYCLE;
+        // Day/Night cycle - nights are shorter when people are rescued!
+        const effectiveNightDuration = Math.max(30000, NIGHT_DURATION - nightTimeReduction); // Min 30 seconds
+        const effectiveFullCycle = DAY_DURATION + effectiveNightDuration;
+        const cycleTime = (now - cycleTimer) % effectiveFullCycle;
         const wasNight = isNightTime;
         isNightTime = cycleTime >= DAY_DURATION;
         dayPhase = isNightTime ? 0 : (cycleTime / DAY_DURATION); // 0-1 during day
@@ -3244,6 +3348,9 @@
         
         // Render diamonds
         renderDiamonds(bob);
+        
+        // Render lost people
+        renderLostPeople(bob);
         
         // Render pet following player
         renderPet(bob);
@@ -4581,6 +4688,110 @@
         }
     }
     
+    function renderLostPeople(bob) {
+        for (const person of lostPeople) {
+            if (person.saved) continue;
+            
+            const dx = person.x - player.x;
+            const dy = person.y - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            const angleToPerson = Math.atan2(dy, dx);
+            let relAngle = angleToPerson - player.angle;
+            while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+            while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+            
+            if (Math.abs(relAngle) > FOV / 2 + 0.3) continue;
+            if (dist > RENDER_DIST * TILE_SIZE) continue;
+            
+            const screenCol = Math.floor(canvas.width / 2 + (relAngle / FOV) * canvas.width);
+            if (screenCol >= 0 && screenCol < zBuffer.length && dist > zBuffer[screenCol]) continue;
+            
+            const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+            const personHeight = (TILE_SIZE * 1.5 / dist) * canvas.height;
+            const personWidth = personHeight * 0.5;
+            const screenY = canvas.height / 2 + bob;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            const time = Date.now() * 0.003;
+            const s = personHeight;
+            
+            // ROBLOX-STYLE BLOCKY CHARACTER - Waving for help!
+            const waveAngle = Math.sin(time * 4 + person.wavePhase) * 0.5;
+            const bodyBob = Math.sin(time * 2 + person.bobPhase) * 3;
+            
+            // Shadow on ground
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(0, s * 0.4, s * 0.25, s * 0.08, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // LEGS - blocky Roblox style
+            ctx.fillStyle = person.pantsColor;
+            // Left leg
+            ctx.fillRect(-s * 0.15, s * 0.1 + bodyBob, s * 0.12, s * 0.3);
+            // Right leg  
+            ctx.fillRect(s * 0.03, s * 0.1 + bodyBob, s * 0.12, s * 0.3);
+            
+            // TORSO - blocky
+            ctx.fillStyle = person.shirtColor;
+            ctx.fillRect(-s * 0.18, -s * 0.25 + bodyBob, s * 0.36, s * 0.4);
+            
+            // LEFT ARM (waving!)
+            ctx.save();
+            ctx.translate(-s * 0.22, -s * 0.2 + bodyBob);
+            ctx.rotate(-1.5 + waveAngle); // Waving up
+            ctx.fillStyle = person.skinColor;
+            ctx.fillRect(-s * 0.04, 0, s * 0.08, s * 0.28);
+            // Hand
+            ctx.fillStyle = person.skinColor;
+            ctx.fillRect(-s * 0.05, s * 0.25, s * 0.1, s * 0.08);
+            ctx.restore();
+            
+            // RIGHT ARM
+            ctx.fillStyle = person.skinColor;
+            ctx.fillRect(s * 0.18, -s * 0.2 + bodyBob, s * 0.08, s * 0.25);
+            
+            // HEAD - blocky cube
+            ctx.fillStyle = person.skinColor;
+            ctx.fillRect(-s * 0.12, -s * 0.55 + bodyBob, s * 0.24, s * 0.28);
+            
+            // Face
+            ctx.fillStyle = '#000000';
+            // Eyes
+            ctx.fillRect(-s * 0.07, -s * 0.45 + bodyBob, s * 0.04, s * 0.04);
+            ctx.fillRect(s * 0.03, -s * 0.45 + bodyBob, s * 0.04, s * 0.04);
+            // Worried mouth
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, -s * 0.32 + bodyBob, s * 0.06, 0.2, Math.PI - 0.2);
+            ctx.stroke();
+            
+            // HAIR
+            ctx.fillStyle = '#442211';
+            ctx.fillRect(-s * 0.12, -s * 0.58 + bodyBob, s * 0.24, s * 0.08);
+            
+            // "HELP!" text above head
+            ctx.fillStyle = '#ff4444';
+            ctx.font = `bold ${Math.max(10, s * 0.12)}px Fredoka One`;
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 5;
+            const helpText = dist < TILE_SIZE * 3 ? '🙋 RESCUE ME!' : '❓ HELP!';
+            ctx.fillText(helpText, 0, -s * 0.65 + bodyBob);
+            
+            // Name tag
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `${Math.max(8, s * 0.08)}px Nunito`;
+            ctx.fillText(person.name, 0, -s * 0.75 + bodyBob);
+            
+            ctx.restore();
+        }
+    }
+    
     function renderPet(bob) {
         if (!equippedPet) return;
         
@@ -5378,12 +5589,14 @@
         document.getElementById('timeIcon').textContent = isNightTime ? '🌙' : '☀️';
         document.getElementById('timeLabel').textContent = isNightTime ? 'NIGHT' : 'DAY';
         
-        const cycleTime = (Date.now() - cycleTimer) % FULL_CYCLE;
+        const effectiveNightDur = Math.max(30000, NIGHT_DURATION - nightTimeReduction);
+        const effectiveCycle = DAY_DURATION + effectiveNightDur;
+        const cycleTimeHud = (Date.now() - cycleTimer) % effectiveCycle;
         let timeLeft;
         if (isNightTime) {
-            timeLeft = Math.ceil((FULL_CYCLE - cycleTime) / 1000);
+            timeLeft = Math.ceil((effectiveCycle - cycleTimeHud) / 1000);
         } else {
-            timeLeft = Math.ceil((DAY_DURATION - cycleTime) / 1000);
+            timeLeft = Math.ceil((DAY_DURATION - cycleTimeHud) / 1000);
         }
         document.getElementById('nightTimer').textContent = timeLeft;
         
@@ -5396,6 +5609,10 @@
         // Base
         document.getElementById('baseLevel').textContent = baseLevel;
         document.getElementById('baseExp').textContent = baseExp;
+        
+        // Rescue progress
+        document.getElementById('peopleSaved').textContent = peopleSaved;
+        document.getElementById('nightBonus').textContent = Math.floor(nightTimeReduction / 1000);
         
         document.getElementById('diamondVal').textContent = diamondsCollected;
         
