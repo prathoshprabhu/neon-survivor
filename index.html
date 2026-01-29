@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ROBLOX-STYLE SURVIVAL</title>
+    <title>I Survived 99 Nights</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -272,12 +272,20 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(180deg, #87ceeb 0%, #4a90c2 50%, #2d6a9f 100%);
+            background: linear-gradient(180deg, #0a0505 0%, #1a0a0a 30%, #2a1010 60%, #150808 100%);
             z-index: 100;
         }
         
+        #startScreen {
+            background: linear-gradient(180deg, #0a0505 0%, #1a0a0a 30%, #2a1010 60%, #150808 100%);
+            background-image: 
+                radial-gradient(ellipse at 50% 0%, rgba(80, 0, 0, 0.3) 0%, transparent 50%),
+                radial-gradient(ellipse at 20% 80%, rgba(50, 20, 0, 0.2) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 70%, rgba(50, 20, 0, 0.2) 0%, transparent 40%);
+        }
+        
         #gameOverScreen, #petShopScreen { display: none; }
-        #gameOverScreen { background: rgba(35,37,39,0.95); }
+        #gameOverScreen { background: linear-gradient(180deg, rgba(20,0,0,0.98) 0%, rgba(40,10,10,0.98) 100%); }
         
         .game-title {
             font-family: 'Fredoka One', cursive;
@@ -589,12 +597,12 @@
     <canvas id="gameCanvas"></canvas>
     
     <div id="startScreen">
-        <h1 class="game-title">SURVIVAL TYCOON</h1>
-        <p class="game-subtitle">A ROBLOX-STYLE EXPERIENCE</p>
+        <h1 class="game-title" style="color: #ff3333; text-shadow: 0 0 30px #ff0000, 0 0 60px #990000, 4px 4px 0 #330000;">I SURVIVED 99 NIGHTS</h1>
+        <p class="game-subtitle" style="color: #ffcc00; letter-spacing: 6px;">A SURVIVAL HORROR EXPERIENCE</p>
         
-        <div style="color: white; margin-bottom: 20px; font-size: 16px; text-shadow: 1px 1px 3px rgba(0,0,0,0.3);">
-            <p>🎮 SURVIVE • BUILD • EXPLORE 🎮</p>
-            <p style="font-size: 14px; opacity: 0.9;">Collect resources, build your base, defeat monsters!</p>
+        <div style="color: #cccccc; margin-bottom: 20px; font-size: 16px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">
+            <p style="font-size: 18px;">🌙 SURVIVE THE DARKNESS 🌙</p>
+            <p style="font-size: 14px; opacity: 0.9; color: #ff9999;">Monsters emerge at night. Can you last 99 nights?</p>
         </div>
         
         <div style="color: white; font-size: 13px; margin-bottom: 20px; text-align: left; max-width: 450px; background: rgba(255,255,255,0.15); padding: 15px 20px; border-radius: 12px; backdrop-filter: blur(5px);">
@@ -617,9 +625,10 @@
         </div>
     </div>
     
-    <div id="petShopScreen">
-        <h2 class="shop-title">🐾 PET SHOP</h2>
-        <div class="coins-display">💰 Coins: <span id="shopCoins">100</span></div>
+    <div id="petShopScreen" style="background: linear-gradient(180deg, #1a0a0a 0%, #2a1515 50%, #0a0505 100%);">
+        <h2 class="shop-title" style="color: #ff6644; text-shadow: 0 0 20px #ff3300;">🐺 COMPANION SANCTUARY 🐺</h2>
+        <p style="color: #999; font-size: 12px; margin-bottom: 15px;">Summon creatures to aid your survival</p>
+        <div class="coins-display" style="color: #ffcc00;">🪙 Souls: <span id="shopCoins">100</span></div>
         
         <div class="chest-options">
             <button class="chest-btn" onclick="buyChest('common')">📦 Common<br><small>50 coins</small></button>
@@ -635,12 +644,12 @@
         <button class="start-button" onclick="startGame()">START GAME</button>
     </div>
     
-    <div id="gameOverScreen">
-        <h1 class="game-title game-over-title" id="gameOverTitle" style="color: #ff6b6b;">GAME OVER</h1>
-        <p class="final-score" style="color: white;">🌙 Nights Survived: <span id="finalNights">0</span>/99</p>
-        <p class="final-score" style="color: #ffcc00;">⭐ Score: <span id="finalScore">0</span></p>
-        <p class="coins-text" style="color: #00d460;">+<span id="coinsEarned">0</span> coins earned!</p>
-        <button class="start-button" style="padding: 15px 50px; font-size: 20px; background: linear-gradient(180deg, #00b853, #009945); border: 3px solid #00d460; border-radius: 8px; color: white; font-family: 'Fredoka One', cursive; cursor: pointer; box-shadow: 0 4px 0 #006b30; margin-top: 20px;" onclick="restartGame()">PLAY AGAIN</button>
+    <div id="gameOverScreen" style="background: linear-gradient(180deg, rgba(20,0,0,0.97) 0%, rgba(40,10,10,0.97) 100%);">
+        <h1 class="game-title game-over-title" id="gameOverTitle" style="color: #ff3333; text-shadow: 0 0 40px #ff0000;">GAME OVER</h1>
+        <p class="final-score" style="color: #aaaaaa; font-size: 28px;">🌙 Nights Survived: <span id="finalNights" style="color: #ff6666;">0</span>/99</p>
+        <p class="final-score" style="color: #ffcc00; font-size: 24px;">💀 Score: <span id="finalScore">0</span></p>
+        <p class="coins-text" style="color: #ff9944; font-size: 18px;">+<span id="coinsEarned">0</span> souls collected</p>
+        <button class="start-button" style="padding: 15px 50px; font-size: 20px; background: linear-gradient(180deg, #882200, #661100); border: 3px solid #aa3300; border-radius: 8px; color: #ffcc00; font-family: 'Fredoka One', cursive; cursor: pointer; box-shadow: 0 4px 0 #440000; margin-top: 20px; text-shadow: 0 0 10px #ff6600;" onclick="restartGame()">TRY AGAIN</button>
     </div>
     
     <div id="topHud" class="hud">
@@ -3611,38 +3620,220 @@
             
             if (!visible) continue; // Enemy is fully occluded by walls
             
-            // SIMPLIFIED MONSTER RENDERING FOR PERFORMANCE
+            // ANIMATED MONSTER RENDERING
             ctx.save();
             ctx.translate(screenX, spriteY + spriteHeight / 2);
             
             const s = spriteHeight / 2;
             const monsterColor = enemy.color || '#666666';
             const eyeColor = enemy.eyeColor || '#ff0000';
+            const monsterName = enemy.name || 'Unknown';
+            const time = Date.now() * 0.005;
             
-            // Simple body - just a colored oval
-            ctx.fillStyle = monsterColor;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, s * 0.4, s * 0.5, 0, 0, Math.PI * 2);
-            ctx.fill();
+            // Animation - breathing/bobbing
+            const breathe = Math.sin(time + enemy.x * 0.01) * s * 0.03;
+            const sway = Math.sin(time * 0.7 + enemy.y * 0.01) * 3;
+            ctx.translate(sway, breathe);
             
-            // Simple eyes
-            ctx.fillStyle = eyeColor;
-            ctx.beginPath();
-            ctx.arc(-s * 0.12, -s * 0.15, s * 0.08, 0, Math.PI * 2);
-            ctx.arc(s * 0.12, -s * 0.15, s * 0.08, 0, Math.PI * 2);
-            ctx.fill();
+            // WOLF-LIKE creatures (Wolf, Fox)
+            if (monsterName === 'Wolf' || monsterName === 'Fox') {
+                ctx.fillStyle = monsterColor;
+                // Body
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.1, s * 0.35, s * 0.22, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.2, s * 0.2, s * 0.18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Ears (animated)
+                const earTwitch = Math.sin(time * 3) * 0.1;
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.15, -s * 0.35);
+                ctx.lineTo(-s * 0.1, -s * 0.55 + earTwitch * s);
+                ctx.lineTo(-s * 0.05, -s * 0.35);
+                ctx.moveTo(s * 0.05, -s * 0.35);
+                ctx.lineTo(s * 0.1, -s * 0.55 - earTwitch * s);
+                ctx.lineTo(s * 0.15, -s * 0.35);
+                ctx.fill();
+                // Glowing eyes
+                ctx.fillStyle = eyeColor;
+                ctx.beginPath();
+                ctx.arc(-s * 0.08, -s * 0.22, s * 0.04, 0, Math.PI * 2);
+                ctx.arc(s * 0.08, -s * 0.22, s * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+                // Legs (animated walking)
+                const legMove = Math.sin(time * 4) * s * 0.08;
+                ctx.fillStyle = monsterColor;
+                ctx.fillRect(-s * 0.25, s * 0.2, s * 0.08, s * 0.2 + legMove);
+                ctx.fillRect(s * 0.17, s * 0.2, s * 0.08, s * 0.2 - legMove);
+            }
+            // BEAR-LIKE creatures (Bear, Yeti, PolarBear)
+            else if (monsterName === 'Bear' || monsterName === 'Yeti' || monsterName === 'PolarBear') {
+                ctx.fillStyle = monsterColor;
+                // Big body
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.05, s * 0.4, s * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.35, s * 0.22, s * 0.2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Ears
+                ctx.beginPath();
+                ctx.arc(-s * 0.18, -s * 0.5, s * 0.07, 0, Math.PI * 2);
+                ctx.arc(s * 0.18, -s * 0.5, s * 0.07, 0, Math.PI * 2);
+                ctx.fill();
+                // Eyes
+                ctx.fillStyle = eyeColor;
+                ctx.beginPath();
+                ctx.arc(-s * 0.1, -s * 0.35, s * 0.05, 0, Math.PI * 2);
+                ctx.arc(s * 0.1, -s * 0.35, s * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                // Arms (animated)
+                const armSwing = Math.sin(time * 2) * 0.2;
+                ctx.fillStyle = monsterColor;
+                ctx.save();
+                ctx.rotate(armSwing);
+                ctx.fillRect(-s * 0.5, -s * 0.1, s * 0.15, s * 0.35);
+                ctx.restore();
+                ctx.save();
+                ctx.rotate(-armSwing);
+                ctx.fillRect(s * 0.35, -s * 0.1, s * 0.15, s * 0.35);
+                ctx.restore();
+            }
+            // FLYING creatures (Dragon, FireBird, Bat)
+            else if (monsterName === 'Dragon' || monsterName === 'FireBird' || monsterName === 'Bat') {
+                const wingFlap = Math.sin(time * 8) * 0.4;
+                ctx.fillStyle = monsterColor;
+                // Body
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.25, s * 0.35, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Wings (animated flapping)
+                ctx.save();
+                ctx.rotate(wingFlap);
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.2, 0);
+                ctx.lineTo(-s * 0.6, -s * 0.3);
+                ctx.lineTo(-s * 0.5, s * 0.1);
+                ctx.fill();
+                ctx.restore();
+                ctx.save();
+                ctx.rotate(-wingFlap);
+                ctx.beginPath();
+                ctx.moveTo(s * 0.2, 0);
+                ctx.lineTo(s * 0.6, -s * 0.3);
+                ctx.lineTo(s * 0.5, s * 0.1);
+                ctx.fill();
+                ctx.restore();
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.3, s * 0.15, s * 0.12, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Glowing eyes
+                ctx.fillStyle = eyeColor;
+                ctx.beginPath();
+                ctx.arc(-s * 0.06, -s * 0.3, s * 0.04, 0, Math.PI * 2);
+                ctx.arc(s * 0.06, -s * 0.3, s * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // SPIDER/CREEPY creatures
+            else if (monsterName === 'Spider') {
+                ctx.fillStyle = monsterColor;
+                // Body
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.3, s * 0.25, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Legs (animated)
+                for (let i = 0; i < 4; i++) {
+                    const legAnim = Math.sin(time * 6 + i) * 0.15;
+                    ctx.save();
+                    ctx.rotate((i - 1.5) * 0.4 + legAnim);
+                    ctx.fillRect(-s * 0.05, 0, s * 0.1, s * 0.5);
+                    ctx.restore();
+                    ctx.save();
+                    ctx.rotate(-(i - 1.5) * 0.4 - legAnim);
+                    ctx.fillRect(-s * 0.05, 0, s * 0.1, s * 0.5);
+                    ctx.restore();
+                }
+                // Eyes (multiple)
+                ctx.fillStyle = eyeColor;
+                ctx.beginPath();
+                ctx.arc(-s * 0.12, -s * 0.08, s * 0.05, 0, Math.PI * 2);
+                ctx.arc(s * 0.12, -s * 0.08, s * 0.05, 0, Math.PI * 2);
+                ctx.arc(-s * 0.06, -s * 0.15, s * 0.03, 0, Math.PI * 2);
+                ctx.arc(s * 0.06, -s * 0.15, s * 0.03, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // BUNNY/SMALL creatures
+            else if (monsterName === 'Bunny') {
+                ctx.fillStyle = monsterColor;
+                // Body
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.1, s * 0.25, s * 0.25, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.2, s * 0.18, s * 0.15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Long ears (animated)
+                const earBounce = Math.abs(Math.sin(time * 3)) * s * 0.1;
+                ctx.fillRect(-s * 0.1, -s * 0.35, s * 0.06, -s * 0.3 - earBounce);
+                ctx.fillRect(s * 0.04, -s * 0.35, s * 0.06, -s * 0.3 - earBounce * 0.8);
+                // Eyes
+                ctx.fillStyle = eyeColor;
+                ctx.beginPath();
+                ctx.arc(-s * 0.07, -s * 0.2, s * 0.04, 0, Math.PI * 2);
+                ctx.arc(s * 0.07, -s * 0.2, s * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // GOLEM/ROCK creatures
+            else if (monsterName === 'Rock Golem' || monsterName === 'Golem' || monsterName === 'Stone Golem') {
+                ctx.fillStyle = monsterColor;
+                // Blocky body
+                ctx.fillRect(-s * 0.3, -s * 0.2, s * 0.6, s * 0.6);
+                // Head
+                ctx.fillRect(-s * 0.2, -s * 0.45, s * 0.4, s * 0.3);
+                // Arms (animated)
+                const armMove = Math.sin(time * 1.5) * s * 0.05;
+                ctx.fillRect(-s * 0.45, -s * 0.1 + armMove, s * 0.18, s * 0.4);
+                ctx.fillRect(s * 0.27, -s * 0.1 - armMove, s * 0.18, s * 0.4);
+                // Glowing eyes
+                ctx.fillStyle = eyeColor;
+                ctx.fillRect(-s * 0.12, -s * 0.38, s * 0.08, s * 0.06);
+                ctx.fillRect(s * 0.04, -s * 0.38, s * 0.08, s * 0.06);
+            }
+            // Default monster (humanoid)
+            else {
+                ctx.fillStyle = monsterColor;
+                // Body
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.3, s * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.4, s * 0.18, s * 0.15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Eyes
+                ctx.fillStyle = eyeColor;
+                ctx.beginPath();
+                ctx.arc(-s * 0.07, -s * 0.4, s * 0.04, 0, Math.PI * 2);
+                ctx.arc(s * 0.07, -s * 0.4, s * 0.04, 0, Math.PI * 2);
+                ctx.fill();
+            }
             
-            // Boss indicator
+            // Boss indicator - glowing aura
             if (enemy.isBoss) {
                 ctx.strokeStyle = '#ffff00';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.ellipse(0, 0, s * 0.5, s * 0.6, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, 0, s * 0.55 + Math.sin(time * 3) * 5, s * 0.65 + Math.sin(time * 3) * 5, 0, 0, Math.PI * 2);
                 ctx.stroke();
             }
             
-            // Skip all the complex monster-specific rendering
-            if (false) { // DISABLED FOR PERFORMANCE
+            // Remove the old complex rendering block
+            if (false) {
                 
             } else if (monsterName === 'Bear') {
                 // Bear - big and bulky
