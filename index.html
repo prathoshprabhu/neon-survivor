@@ -3549,7 +3549,7 @@
             const spriteHeight = (TILE_SIZE * enemy.size / dist) * canvas.height;
             const spriteWidth = spriteHeight * 0.6;
             // When player jumps, look DOWN at enemies (they appear lower)
-            const jumpOffset = playerZ * (300 / Math.max(dist, 50));
+            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
             const spriteY = canvas.height / 2 - spriteHeight / 2 + bob + jumpOffset;
             
             // CHECK OCCLUSION - is enemy behind a wall?
@@ -4209,7 +4209,7 @@
             
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const size = (TILE_SIZE * 0.4 / dist) * canvas.height;
-            const jumpOffset = playerZ * (300 / Math.max(dist, 50));
+            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
             const screenY = canvas.height / 2 + bob + jumpOffset;
             
             ctx.save();
@@ -4266,7 +4266,7 @@
             // 3D VERTICAL POSITION - trees stay stationary, player view moves
             const verticalOffset = (dist / (RENDER_DIST * TILE_SIZE)) * canvas.height * 0.15;
             // Trees move UP when player jumps (player looking down at them)
-            const jumpOffset = playerZ * (300 / dist); // Perspective-correct jump offset
+            const jumpOffset = Math.min(150, playerZ * (200 / dist)); // Capped jump offset
             const screenY = canvas.height / 2 + verticalOffset + bob + jumpOffset;
             
             ctx.save();
@@ -4351,10 +4351,14 @@
             
             const dx = entrance.x * TILE_SIZE - player.x;
             const dy = entrance.y * TILE_SIZE - player.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const rawDist = Math.sqrt(dx * dx + dy * dy);
             
-            // Skip if too close (prevents freeze) or too far
-            if (dist < TILE_SIZE * 2 || dist > RENDER_DIST * TILE_SIZE) return;
+            // AGGRESSIVE SKIP - prevent any rendering issues at close range
+            if (rawDist < TILE_SIZE * 4) return; // Don't render when close
+            if (rawDist > RENDER_DIST * TILE_SIZE) return;
+            
+            // Safe distance (minimum to prevent division issues)
+            const dist = Math.max(rawDist, TILE_SIZE * 5);
             
             const angleToZone = Math.atan2(dy, dx);
             let relAngle = angleToZone - player.angle;
@@ -4364,8 +4368,8 @@
             if (Math.abs(relAngle) > FOV / 2 + 0.2) return;
             
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-            const size = Math.min(300, (TILE_SIZE * 4 / dist) * 300);
-            const jumpOffset = playerZ * (300 / Math.max(dist, 100));
+            const size = Math.min(200, (TILE_SIZE * 3 / dist) * 200);
+            const jumpOffset = Math.min(100, playerZ * (200 / dist));
             const baseY = canvas.height / 2 + size * 0.3 + jumpOffset;
             
             ctx.save();
@@ -4435,7 +4439,7 @@
             
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const size = (TILE_SIZE * 0.4 / dist) * canvas.height;
-            const jumpOffset = playerZ * (300 / Math.max(dist, 50));
+            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
             const screenY = canvas.height / 2 + bob + size * 0.3 + jumpOffset;
             
             ctx.save();
@@ -4506,7 +4510,7 @@
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const size = (TILE_SIZE * 0.5 / dist) * canvas.height;
             const floatY = Math.sin(time + diamond.sparkle) * 5;
-            const jumpOffset = playerZ * (300 / Math.max(dist, 50));
+            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
             const screenY = canvas.height / 2 + bob + floatY + jumpOffset;
             
             ctx.save();
@@ -4575,7 +4579,7 @@
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const personHeight = (TILE_SIZE * 1.5 / dist) * canvas.height;
             const personWidth = personHeight * 0.5;
-            const jumpOffset = playerZ * (300 / Math.max(dist, 50));
+            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
             const screenY = canvas.height / 2 + bob + jumpOffset;
             
             ctx.save();
@@ -4681,7 +4685,7 @@
         const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
         const size = (TILE_SIZE * 0.6 / dist) * canvas.height;
         const breathe = Math.sin(Date.now() * 0.003) * size * 0.05;
-        const jumpOffset = playerZ * (300 / Math.max(dist, 50));
+        const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
         const screenY = canvas.height / 2 + bob + breathe + jumpOffset;
         
         ctx.save();
