@@ -1,8 +1,8 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="NEON SURVIVOR | 2087",
-    page_icon="🎮",
+    page_title="I Survived 99 Nights",
+    page_icon="🌙",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
