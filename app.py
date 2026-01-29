@@ -1,8 +1,8 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="I Survived 99 Nights",
-    page_icon="🌙",
+    page_title="The 99 Survival",
+    page_icon="logo.jpg",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
