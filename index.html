@@ -9,12 +9,13 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --neon-cyan: #00f7ff;
-            --neon-pink: #ff00aa;
-            --neon-purple: #9d00ff;
-            --neon-green: #00ff6a;
-            --neon-orange: #ff6a00;
-            --dark-bg: #0a0a12;
+            --ancient-gold: #c9a227;
+            --blood-red: #8b0000;
+            --bone-white: #e8dcc4;
+            --shadow-black: #1a1510;
+            --moss-green: #3a4a30;
+            --torch-orange: #ff6a20;
+            --dark-bg: #0a0908;
         }
         
         body {
@@ -50,10 +51,10 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            background: rgba(0,0,0,0.6);
+            background: rgba(30,20,10,0.8);
             padding: 8px 15px;
             border-radius: 8px;
-            border: 1px solid rgba(0,247,255,0.3);
+            border: 1px solid rgba(139,69,19,0.5);
         }
         
         .stat-icon { font-size: 20px; }
@@ -71,12 +72,12 @@
             transition: width 0.2s;
         }
         
-        .health-fill { background: linear-gradient(90deg, #ff0044, #ff4466); }
-        .shield-fill { background: linear-gradient(90deg, #00f7ff, #66f7ff); }
+        .health-fill { background: linear-gradient(90deg, #8b0000, #aa3333); }
+        .shield-fill { background: linear-gradient(90deg, #c9a227, #ddc55e); }
         
         .stat-text {
             font-size: 12px;
-            color: var(--neon-cyan);
+            color: var(--bone-white);
             min-width: 50px;
         }
         
@@ -86,10 +87,11 @@
             transform: translateX(-50%);
             display: flex;
             gap: 5px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(20,15,10,0.85);
             padding: 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            border: 2px solid rgba(139,69,19,0.6);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
         }
         
         .weapon-slot {
@@ -99,15 +101,15 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: rgba(0,0,0,0.5);
-            border: 2px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
+            background: rgba(40,30,20,0.6);
+            border: 2px solid rgba(139,69,19,0.3);
+            border-radius: 5px;
             font-size: 22px;
         }
         
         .weapon-slot.active {
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 15px rgba(0,247,255,0.5);
+            border-color: var(--ancient-gold);
+            box-shadow: 0 0 15px rgba(201,162,39,0.5);
         }
         
         .weapon-slot.locked { opacity: 0.3; }
@@ -117,15 +119,16 @@
             top: 20px;
             right: 20px;
             text-align: right;
-            background: rgba(0,0,0,0.6);
+            background: rgba(30,20,10,0.85);
             padding: 15px 20px;
-            border-radius: 12px;
-            border: 1px solid var(--neon-pink);
+            border-radius: 8px;
+            border: 2px solid var(--blood-red);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
         }
         
-        .score-label { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 2px; }
-        .score-value { font-size: 32px; color: var(--neon-pink); text-shadow: 0 0 20px var(--neon-pink); }
-        .kills-text { font-size: 14px; color: var(--neon-green); margin-top: 5px; }
+        .score-label { font-size: 11px; color: rgba(200,180,150,0.6); letter-spacing: 2px; }
+        .score-value { font-size: 32px; color: var(--blood-red); text-shadow: 0 0 20px var(--blood-red); }
+        .kills-text { font-size: 14px; color: var(--ancient-gold); margin-top: 5px; }
         .coins-text { font-size: 14px; color: #ffd700; margin-top: 3px; }
         
         #diamondHud {
@@ -420,11 +423,13 @@
             left: 50%;
             transform: translate(-50%, -50%);
             padding: 18px 35px;
-            background: linear-gradient(135deg, rgba(0,255,106,0.2), rgba(0,247,255,0.2));
-            border: 2px solid var(--neon-green);
-            border-radius: 12px;
-            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, rgba(60,40,20,0.85), rgba(40,25,15,0.9));
+            border: 2px solid var(--ancient-gold);
+            border-radius: 8px;
+            font-family: 'Times New Roman', serif;
             font-size: 22px;
+            color: var(--bone-white);
+            box-shadow: 0 0 30px rgba(139,69,19,0.5), inset 0 0 20px rgba(0,0,0,0.5);
             color: var(--neon-green);
             opacity: 0;
             pointer-events: none;
@@ -439,15 +444,16 @@
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
-            background: rgba(0,20,25,0.8);
+            background: rgba(30,20,10,0.85);
             padding: 10px 25px;
-            border-radius: 10px;
-            border: 1px solid var(--neon-cyan);
+            border-radius: 8px;
+            border: 2px solid var(--ancient-gold);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
             box-shadow: 0 0 20px rgba(0, 247, 255, 0.3);
         }
         
-        .wave-text { font-size: 20px; color: var(--neon-green); text-shadow: 0 0 15px var(--neon-green); }
-        .wave-enemies { font-size: 12px; color: var(--neon-cyan); }
+        .wave-text { font-size: 20px; color: var(--ancient-gold); text-shadow: 0 0 15px var(--blood-red); font-family: 'Times New Roman', serif; }
+        .wave-enemies { font-size: 12px; color: var(--bone-white); }
         
         #damageOverlay {
             position: absolute;
@@ -467,10 +473,11 @@
             pointer-events: none;
             background: radial-gradient(ellipse at center, 
                 transparent 0%, 
-                transparent 40%,
-                rgba(0,0,0,0.3) 70%,
-                rgba(0,0,0,0.7) 90%,
-                rgba(0,0,0,0.95) 100%);
+                transparent 30%,
+                rgba(30,10,5,0.2) 50%,
+                rgba(20,5,0,0.5) 70%,
+                rgba(10,2,0,0.8) 90%,
+                rgba(5,0,0,0.98) 100%);
             z-index: 5;
         }
         
@@ -583,30 +590,30 @@
     <canvas id="gameCanvas"></canvas>
     
     <div id="startScreen">
-        <h1 class="game-title" style="color: #00ffaa; text-shadow: 0 0 30px #00ff88, 0 0 60px #00aa55;">99 NIGHTS</h1>
-        <p class="game-subtitle" style="color: #00ddff;">YEAR 2187 | SECTOR 7</p>
+        <h1 class="game-title" style="color: #c9a227; text-shadow: 0 0 30px #8b0000, 0 0 60px #330000; font-family: 'Times New Roman', serif;">99 NIGHTS</h1>
+        <p class="game-subtitle" style="color: #aa8866; font-style: italic;">of the Forsaken Lands</p>
         
-        <div style="color: #00ffcc; margin-bottom: 15px; font-size: 15px; text-shadow: 0 0 10px #00ff88;">
-            <p>⚡ SURVIVE 99 CYCLES TO ESCAPE ⚡</p>
-            <p style="font-size: 13px; color: #88aacc;">Day: 2 min (recon) | Night: 2 min (THREAT LEVEL: CRITICAL)</p>
+        <div style="color: #cc9966; margin-bottom: 15px; font-size: 15px; text-shadow: 0 0 10px #8b0000;">
+            <p>☠️ SURVIVE THE ANCIENT CURSE ☠️</p>
+            <p style="font-size: 13px; color: #887766;">Day: 2 min (gather) | Night: 2 min (THEY COME...)</p>
         </div>
         
-        <div style="color: #aabbcc; font-size: 11px; margin-bottom: 15px; text-align: left; max-width: 400px; margin: 0 auto 15px auto; background: rgba(0,50,50,0.3); padding: 12px; border-radius: 8px; border: 1px solid #00aa88;">
-            <p>🪓 <b>AXE</b> = Chop trees | ⛏️ <b>PICKAXE</b> = Mine stone/ore</p>
-            <p>⏫ <b>SPACE</b> = Jump | Explore 3D terrain!</p>
-            <p>❄️ Enter the <b>GLACIER</b> for secret boss</p>
-            <p>🌋 Enter the <b>VOLCANO</b> for fire boss</p>
-            <p>🌲 Abundant trees & caves to explore!</p>
+        <div style="color: #aa9988; font-size: 11px; margin-bottom: 15px; text-align: left; max-width: 400px; margin: 0 auto 15px auto; background: rgba(30,20,10,0.7); padding: 12px; border-radius: 8px; border: 1px solid #8b4513;">
+            <p>🪓 <b>AXE</b> = Fell the cursed trees | ⛏️ <b>PICKAXE</b> = Mine ancient stone</p>
+            <p>⏫ <b>SPACE</b> = Jump | Explore the ruins!</p>
+            <p>❄️ Enter the <b>FROZEN TOMBS</b> - Awaken the Frost Titan</p>
+            <p>🔥 Enter the <b>INFERNAL RUINS</b> - Face the Fire Lord</p>
+            <p>💀 Beware the creatures that stalk the night...</p>
         </div>
         
-        <p style="color: #00ffaa; margin-bottom: 10px; font-family: 'Orbitron', monospace; font-size: 14px;">SELECT CONTROL INTERFACE:</p>
+        <p style="color: #c9a227; margin-bottom: 10px; font-family: serif; font-size: 14px;">CHOOSE THY PATH:</p>
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #00aa66, #006644); border-color: #00ffaa;" onclick="selectControls('wasd')">WASD</button>
-            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #00aa66, #006644); border-color: #00ffaa;" onclick="selectControls('arrows')">ARROWS</button>
+            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #5a3a1a, #3a2510); border-color: #c9a227;" onclick="selectControls('wasd')">WASD</button>
+            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #5a3a1a, #3a2510); border-color: #c9a227;" onclick="selectControls('arrows')">ARROWS</button>
         </div>
         
-        <div class="controls-info" style="color: #88ddcc; font-size: 11px;">
-            <p>🖱️ Mouse = Look | Click = Fire | M = Tactical Map</p>
+        <div class="controls-info" style="color: #998877; font-size: 11px;">
+            <p>🖱️ Mouse = Look | Click = Attack | M = Ancient Map</p>
         </div>
     </div>
     
@@ -629,11 +636,11 @@
     </div>
     
     <div id="gameOverScreen">
-        <h1 class="game-title game-over-title" id="gameOverTitle" style="text-shadow: 0 0 30px #ff0044;">SIGNAL LOST</h1>
-        <p class="final-score" style="color: #00ffaa;">⚡ CYCLES SURVIVED: <span id="finalNights">0</span>/99</p>
-        <p class="final-score">SCORE: <span id="finalScore">0</span></p>
-        <p class="coins-text" style="color: #00ddff;">+<span id="coinsEarned">0</span> credits earned</p>
-        <button class="start-button" style="background: linear-gradient(135deg, #00aa66, #006644); border-color: #00ffaa;" onclick="restartGame()">REINITIALIZE</button>
+        <h1 class="game-title game-over-title" id="gameOverTitle" style="text-shadow: 0 0 30px #8b0000; font-family: 'Times New Roman', serif;">SOUL CONSUMED</h1>
+        <p class="final-score" style="color: #c9a227;">☠️ NIGHTS ENDURED: <span id="finalNights">0</span>/99</p>
+        <p class="final-score">FATE: <span id="finalScore">0</span></p>
+        <p class="coins-text" style="color: #aa8866;">+<span id="coinsEarned">0</span> souls collected</p>
+        <button class="start-button" style="background: linear-gradient(135deg, #5a3a1a, #3a2510); border-color: #c9a227;" onclick="restartGame()">RISE AGAIN</button>
     </div>
     
     <div id="topHud" class="hud">
@@ -661,8 +668,8 @@
     </div>
     
     <div id="resourceHud" class="hud">
-        <div style="font-size: 11px; margin-bottom: 5px;">RESOURCES</div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div style="font-size: 11px; margin-bottom: 5px; color: #aa9988;">PROVISIONS</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; color: #c9a227;">
             <span>🪵<span id="resWood">0</span></span>
             <span>🪨<span id="resStone">0</span></span>
             <span>⛏️<span id="resIron">0</span></span>
@@ -671,21 +678,21 @@
     </div>
     
     <div id="baseHud" class="hud">
-        <div>🏠 BASE LV.<span id="baseLevel">1</span></div>
-        <div style="font-size: 10px;">XP: <span id="baseExp">0</span>/100</div>
+        <div style="color: #c9a227;">🏚️ SANCTUM LV.<span id="baseLevel">1</span></div>
+        <div style="font-size: 10px; color: #887766;">POWER: <span id="baseExp">0</span>/100</div>
     </div>
     
     <div id="playerIdHud" class="hud">
-        <div style="font-size: 10px; color: #888;">OPERATOR</div>
-        <div id="playerId" style="font-size: 14px; color: #00ffaa; font-family: 'Orbitron', monospace;">PLR-XXXXXX</div>
-        <div style="font-size: 9px; color: #666;">SKIN: <span id="skinName">Standard</span></div>
+        <div style="font-size: 10px; color: #887766;">WANDERER</div>
+        <div id="playerId" style="font-size: 14px; color: #c9a227; font-family: serif;">SOU-XXXXXX</div>
+        <div style="font-size: 9px; color: #776655;">GUISE: <span id="skinName">Traveler</span></div>
     </div>
     
     <div id="scoreHud" class="hud">
         <div class="score-label">SCORE</div>
         <div class="score-value" id="scoreVal">0</div>
-        <div class="kills-text">KILLS: <span id="killsVal">0</span></div>
-        <div class="coins-text">💰 <span id="coinsVal">0</span></div>
+        <div class="kills-text">SLAIN: <span id="killsVal">0</span></div>
+        <div class="coins-text">💀 <span id="coinsVal">0</span> souls</div>
     </div>
     
     <div id="diamondHud" class="hud" style="display: none;">
@@ -745,60 +752,60 @@
     let mapOffsetX = 0; // For infinite maze
     let mapOffsetY = 0;
     
-    // 99 NIGHTS - FUTURISTIC Biome System
+    // 99 NIGHTS - ANCIENT HORROR Biome System
     const BIOMES = {
-        // CYBER FOREST (80% of surface) - Neon-lit alien forest
+        // CURSED FOREST - Dark ancient woods
         forest: { 
-            wallColor: [20, 80, 60], 
-            floorColor: [10, 35, 25], 
-            skyColorDay: '#225566',
-            skyColorNight: '#051510',
-            name: 'Neon Forest',
-            dayMonster: { name: 'Wolf', color: '#445566', eyeColor: '#00ffaa', health: 40, speed: 1.5, damage: 8 },
-            nightMonster: { name: 'Wendigo', color: '#1a2a2a', eyeColor: '#00ff88', health: 120, speed: 2.0, damage: 25 },
+            wallColor: [35, 45, 25], 
+            floorColor: [18, 22, 12], 
+            skyColorDay: '#3a4030',
+            skyColorNight: '#0a0c08',
+            name: 'Cursed Woods',
+            dayMonster: { name: 'Dire Wolf', color: '#2a2a2a', eyeColor: '#ffcc00', health: 40, speed: 1.5, damage: 8 },
+            nightMonster: { name: 'Wendigo', color: '#1a1510', eyeColor: '#ff0000', health: 120, speed: 2.0, damage: 25 },
             weight: 40
         },
         darkforest: { 
-            wallColor: [15, 50, 40], 
-            floorColor: [8, 25, 18], 
-            skyColorDay: '#1a4455',
-            skyColorNight: '#030a08',
-            name: 'Deep Wilds',
-            dayMonster: { name: 'Bear', color: '#334455', eyeColor: '#ff8800', health: 100, speed: 0.8, damage: 20 },
-            nightMonster: { name: 'Wendigo', color: '#0a1515', eyeColor: '#ff0044', health: 150, speed: 2.2, damage: 30 },
+            wallColor: [25, 30, 20], 
+            floorColor: [12, 15, 10], 
+            skyColorDay: '#2a3020',
+            skyColorNight: '#050605',
+            name: 'Haunted Hollow',
+            dayMonster: { name: 'Shadow Bear', color: '#1a1a1a', eyeColor: '#ff4400', health: 100, speed: 0.8, damage: 20 },
+            nightMonster: { name: 'The Hollow', color: '#0a0a0a', eyeColor: '#880000', health: 150, speed: 2.2, damage: 30 },
             weight: 40
         },
-        // VOLCANIC CORE (10% of surface) - Molten tech zone
+        // INFERNAL RUINS - Ancient volcanic temple
         volcanic: { 
-            wallColor: [100, 30, 10], 
-            floorColor: [50, 15, 5], 
-            skyColorDay: '#553311',
-            skyColorNight: '#200800',
-            name: 'Molten Core',
-            dayMonster: { name: 'Fire Imp', color: '#ff4400', eyeColor: '#ffff00', health: 50, speed: 1.8, damage: 15 },
-            nightMonster: { name: 'Ram', color: '#550000', eyeColor: '#ff4400', health: 180, speed: 1.5, damage: 35 },
+            wallColor: [80, 25, 15], 
+            floorColor: [40, 12, 8], 
+            skyColorDay: '#4a2010',
+            skyColorNight: '#150500',
+            name: 'Infernal Ruins',
+            dayMonster: { name: 'Hellhound', color: '#550000', eyeColor: '#ffaa00', health: 50, speed: 1.8, damage: 15 },
+            nightMonster: { name: 'Baphomet', color: '#330000', eyeColor: '#ff0000', health: 180, speed: 1.5, damage: 35 },
             weight: 10
         },
-        // CRYO ZONE (10% of surface) - Frozen tech wasteland
+        // FROZEN TOMBS - Ancient ice burial grounds
         frozen: { 
-            wallColor: [50, 80, 120], 
-            floorColor: [25, 40, 65], 
-            skyColorDay: '#335588',
-            skyColorNight: '#081525',
-            name: 'Cryo Zone',
-            dayMonster: { name: 'Ice Wolf', color: '#88aacc', eyeColor: '#00ddff', health: 60, speed: 1.3, damage: 12 },
-            nightMonster: { name: 'Yeti', color: '#aaccee', eyeColor: '#00ffff', health: 250, speed: 1.0, damage: 40 },
+            wallColor: [55, 65, 80], 
+            floorColor: [30, 35, 45], 
+            skyColorDay: '#404855',
+            skyColorNight: '#0a0c10',
+            name: 'Frozen Tombs',
+            dayMonster: { name: 'Frost Wraith', color: '#667788', eyeColor: '#aaddff', health: 60, speed: 1.3, damage: 12 },
+            nightMonster: { name: 'Yeti', color: '#99aabb', eyeColor: '#ccffff', health: 250, speed: 1.0, damage: 40 },
             weight: 10
         },
-        // CRYSTAL CAVERNS (underground)
+        // CATACOMBS - Underground burial chambers
         cave: { 
-            wallColor: [40, 35, 60], 
-            floorColor: [20, 18, 35], 
-            skyColorDay: '#000008',
-            skyColorNight: '#000005',
-            name: 'Crystal Depths',
-            dayMonster: { name: 'Bat Swarm', color: '#222233', eyeColor: '#ff00aa', health: 20, speed: 2.5, damage: 3 },
-            nightMonster: { name: 'Golem', color: '#445566', eyeColor: '#aa00ff', health: 300, speed: 0.6, damage: 50 },
+            wallColor: [45, 40, 35], 
+            floorColor: [22, 20, 18], 
+            skyColorDay: '#080605',
+            skyColorNight: '#030302',
+            name: 'The Catacombs',
+            dayMonster: { name: 'Skeleton', color: '#ccbbaa', eyeColor: '#ff0000', health: 20, speed: 2.5, damage: 3 },
+            nightMonster: { name: 'Stone Golem', color: '#555544', eyeColor: '#ffaa00', health: 300, speed: 0.6, damage: 50 },
             hasDiamonds: true,
             hasResources: true,
             weight: 0
@@ -863,8 +870,8 @@
         { id: 8, name: 'Railgun', icon: '⚡', damage: 200, fireRate: 2000, ammo: 5, range: 30, unlocked: false, gunType: 'railgun' },
     ];
     
-    // Player ID System
-    let playerID = 'PLR-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    // Player ID System - Ancient Soul Identifier
+    let playerID = 'SOU-' + Math.random().toString(36).substr(2, 6).toUpperCase();
     
     // Zoom/Perspective System
     let zoomLevel = 1.0;
@@ -887,13 +894,13 @@
     let secretBossSpawned = false;
     let volcanoBossSpawned = false;
     
-    // Skins based on perspective
+    // Skins based on perspective - Ancient Horror Theme
     const PLAYER_SKINS = {
-        default: { name: 'Standard', color: '#00ffaa', accent: '#00ddff' },
-        neon: { name: 'Neon', color: '#ff00ff', accent: '#00ffff' },
-        military: { name: 'Military', color: '#556644', accent: '#88aa66' },
-        cyber: { name: 'Cyber', color: '#ff4400', accent: '#ffaa00' },
-        stealth: { name: 'Stealth', color: '#222222', accent: '#444444' }
+        default: { name: 'Traveler', color: '#8b7355', accent: '#c9a227' },
+        neon: { name: 'Cursed', color: '#8b0000', accent: '#ff3300' },
+        military: { name: 'Hunter', color: '#3a4a30', accent: '#6b8e4a' },
+        cyber: { name: 'Ritualist', color: '#4a3a5a', accent: '#9966aa' },
+        stealth: { name: 'Shadow', color: '#1a1510', accent: '#3a3530' }
     };
     let currentSkin = 'default';
     
@@ -2116,8 +2123,8 @@
         const coinsEarned = Math.floor(player.score / 5) + (currentNight * 10);
         player.coins += coinsEarned;
         
-        document.getElementById('gameOverTitle').textContent = won ? '⚡ EXTRACTION COMPLETE ⚡' : 'SIGNAL LOST';
-        document.getElementById('gameOverTitle').style.color = won ? '#00ffaa' : '#ff4444';
+        document.getElementById('gameOverTitle').textContent = won ? '☀️ THE CURSE IS BROKEN ☀️' : 'SOUL CONSUMED';
+        document.getElementById('gameOverTitle').style.color = won ? '#c9a227' : '#8b0000';
         document.getElementById('finalNights').textContent = Math.min(currentNight, NIGHTS_TO_WIN);
         document.getElementById('finalScore').textContent = player.score;
         document.getElementById('coinsEarned').textContent = coinsEarned;
@@ -2258,7 +2265,7 @@
             );
             if (distToGlacier < TILE_SIZE * 1.5) {
                 insideGlacier = true;
-                showNotification('❄️ ENTERING THE GLACIER - Secret Boss Awaits!');
+                showNotification('❄️ ENTERING THE FROZEN TOMBS - Ancient Terror Awaits!');
                 if (!secretBossSpawned) {
                     spawnGlacierBoss();
                     secretBossSpawned = true;
@@ -2273,7 +2280,7 @@
             );
             if (distToVolcano < TILE_SIZE * 1.5) {
                 insideVolcano = true;
-                showNotification('🌋 ENTERING THE VOLCANO - Fire Lord Awaits!');
+                showNotification('🌋 ENTERING THE INFERNAL RUINS - Demon Lord Awaits!');
                 if (!volcanoBossSpawned) {
                     spawnVolcanoBoss();
                     volcanoBossSpawned = true;
@@ -2429,7 +2436,7 @@
         
         // Night starts
         if (isNightTime && !wasNight) {
-            showNotification(`🌙 NIGHT ${currentNight} BEGINS - Beware the creatures!`);
+            showNotification(`🌙 DUSK ${currentNight} FALLS - The cursed ones awaken!`);
             enemiesSpawned = 0;
             enemiesKilled = 0;
         }
@@ -2444,16 +2451,16 @@
             // Check for cult day
             if (currentNight === cultDay) {
                 cultActive = true;
-                showNotification('⚠️ THE CULT HAS ARRIVED!');
+                showNotification('⚠️ THE DARK CULT EMERGES!');
                 spawnCult();
                 cultDay = currentNight + Math.floor(Math.random() * 10) + 5;
             } else {
                 cultActive = false;
-                showNotification(`☀️ DAY ${currentNight} - You survived the night!`);
+                showNotification(`☀️ DAWN ${currentNight} - You endured the darkness!`);
             }
             
             if (currentNight > NIGHTS_TO_WIN) {
-                showNotification('🏆 YOU SURVIVED 99 NIGHTS!');
+                showNotification('🏆 THE CURSE IS BROKEN! YOU HAVE SURVIVED!');
                 setTimeout(() => gameOver(), 3000);
             }
             
@@ -2461,7 +2468,7 @@
             if (baseExp >= BASE_EXP_PER_LEVEL) {
                 baseLevel++;
                 baseExp = 0;
-                showNotification(`🏠 BASE LEVEL UP! Level ${baseLevel}`);
+                showNotification(`🏚️ SANCTUM EMPOWERED! Level ${baseLevel}`);
             }
         }
         
@@ -2485,14 +2492,14 @@
             // Wave completion coin bonus!
             const waveBonus = wave * 25;
             player.coins += waveBonus;
-            showNotification(`⚡ WAVE ${wave}! +${waveBonus} 💰`);
+            showNotification(`☠️ WAVE ${wave}! +${waveBonus} souls`);
             
-            if (wave === 2 && !WEAPONS[1].unlocked) { WEAPONS[1].unlocked = true; showNotification('🔪 KNIFE UNLOCKED!'); }
-            if (wave === 3 && !WEAPONS[2].unlocked) { WEAPONS[2].unlocked = true; showNotification('💥 .44 UNLOCKED!'); }
-            if (wave === 5 && !WEAPONS[3].unlocked) { WEAPONS[3].unlocked = true; showNotification('🔫 RIFLE UNLOCKED!'); }
-            if (wave === 7 && !WEAPONS[4].unlocked) { WEAPONS[4].unlocked = true; showNotification('🎯 SNIPER UNLOCKED!'); }
-            if (wave === 10 && !WEAPONS[5].unlocked) { WEAPONS[5].unlocked = true; showNotification('⚔️ KATANA UNLOCKED!'); }
-            if (wave === 15 && !WEAPONS[6].unlocked) { WEAPONS[6].unlocked = true; showNotification('⚡ RAILGUN UNLOCKED!'); }
+            if (wave === 2 && !WEAPONS[1].unlocked) { WEAPONS[1].unlocked = true; showNotification('🔪 DAGGER DISCOVERED!'); }
+            if (wave === 3 && !WEAPONS[2].unlocked) { WEAPONS[2].unlocked = true; showNotification('💥 HAND CANNON DISCOVERED!'); }
+            if (wave === 5 && !WEAPONS[3].unlocked) { WEAPONS[3].unlocked = true; showNotification('🔫 MUSKET DISCOVERED!'); }
+            if (wave === 7 && !WEAPONS[4].unlocked) { WEAPONS[4].unlocked = true; showNotification('🎯 CROSSBOW DISCOVERED!'); }
+            if (wave === 10 && !WEAPONS[5].unlocked) { WEAPONS[5].unlocked = true; showNotification('⚔️ CURSED BLADE DISCOVERED!'); }
+            if (wave === 15 && !WEAPONS[6].unlocked) { WEAPONS[6].unlocked = true; showNotification('⚡ ANCIENT RELIC DISCOVERED!'); }
             updateWeaponHud();
         }
         
@@ -2624,7 +2631,7 @@
             score: 5000,
             lastAttack: 0,
         });
-        showNotification('⚔️ FROST TITAN AWAKENS!');
+        showNotification('⚔️ THE FROST TITAN RISES FROM ITS SLUMBER!');
     }
     
     function spawnVolcanoBoss() {
@@ -2645,7 +2652,7 @@
             score: 4000,
             lastAttack: 0,
         });
-        showNotification('🔥 FIRE LORD EMERGES!');
+        showNotification('🔥 THE DEMON LORD RISES FROM THE FLAMES!');
     }
     
     function spawnCult() {
@@ -2914,46 +2921,47 @@
         const celestialRadius = 40;
         
         if (isNightTime) {
-            // MOON at night
-            const moonGlow = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, celestialRadius * 4);
-            moonGlow.addColorStop(0, 'rgba(200, 220, 255, 0.4)');
-            moonGlow.addColorStop(0.2, 'rgba(150, 170, 200, 0.2)');
-            moonGlow.addColorStop(0.5, 'rgba(100, 120, 150, 0.1)');
+            // BLOOD MOON at night - eerie and ancient
+            const moonGlow = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, celestialRadius * 5);
+            moonGlow.addColorStop(0, 'rgba(180, 50, 30, 0.5)');
+            moonGlow.addColorStop(0.2, 'rgba(120, 30, 20, 0.3)');
+            moonGlow.addColorStop(0.5, 'rgba(80, 20, 10, 0.15)');
             moonGlow.addColorStop(1, 'transparent');
             ctx.fillStyle = moonGlow;
             ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
             
             const moonCore = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, celestialRadius);
-            moonCore.addColorStop(0, '#eeeeff');
-            moonCore.addColorStop(0.4, '#ccccdd');
-            moonCore.addColorStop(1, '#999aaa');
+            moonCore.addColorStop(0, '#ffccbb');
+            moonCore.addColorStop(0.3, '#dd8866');
+            moonCore.addColorStop(0.7, '#aa4433');
+            moonCore.addColorStop(1, '#662211');
             ctx.fillStyle = moonCore;
             ctx.beginPath();
             ctx.arc(celestialX, celestialY, celestialRadius, 0, Math.PI * 2);
             ctx.fill();
             
-            // Moon craters
-            ctx.fillStyle = 'rgba(100, 100, 120, 0.3)';
+            // Ancient runes on blood moon
+            ctx.fillStyle = 'rgba(60, 20, 10, 0.4)';
             ctx.beginPath();
-            ctx.arc(celestialX - 10, celestialY - 5, 8, 0, Math.PI * 2);
+            ctx.arc(celestialX - 12, celestialY - 8, 10, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(celestialX + 12, celestialY + 8, 5, 0, Math.PI * 2);
+            ctx.arc(celestialX + 10, celestialY + 5, 6, 0, Math.PI * 2);
             ctx.fill();
         } else {
-            // SUN during day
+            // DYING SUN during day - pale and ancient
             const sunGlow = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, celestialRadius * 4);
-            sunGlow.addColorStop(0, 'rgba(255, 220, 100, 0.6)');
-            sunGlow.addColorStop(0.2, 'rgba(255, 200, 50, 0.3)');
-            sunGlow.addColorStop(0.5, 'rgba(255, 180, 0, 0.1)');
+            sunGlow.addColorStop(0, 'rgba(200, 180, 140, 0.5)');
+            sunGlow.addColorStop(0.2, 'rgba(180, 150, 100, 0.25)');
+            sunGlow.addColorStop(0.5, 'rgba(150, 120, 80, 0.1)');
             sunGlow.addColorStop(1, 'transparent');
             ctx.fillStyle = sunGlow;
             ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
             
             const sunCore = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, celestialRadius);
-            sunCore.addColorStop(0, '#ffffee');
-            sunCore.addColorStop(0.4, '#ffdd44');
-            sunCore.addColorStop(1, '#ffaa00');
+            sunCore.addColorStop(0, '#f5e8d0');
+            sunCore.addColorStop(0.4, '#d4b896');
+            sunCore.addColorStop(1, '#a08060');
             ctx.fillStyle = sunCore;
             ctx.beginPath();
             ctx.arc(celestialX, celestialY, celestialRadius, 0, Math.PI * 2);
@@ -4659,7 +4667,7 @@
         // Day/Night timer
         document.getElementById('nightNum').textContent = Math.min(currentNight, NIGHTS_TO_WIN);
         document.getElementById('timeIcon').textContent = isNightTime ? '🌙' : '☀️';
-        document.getElementById('timeLabel').textContent = isNightTime ? 'NIGHT' : 'DAY';
+        document.getElementById('timeLabel').textContent = isNightTime ? 'DUSK' : 'DAWN';
         
         const cycleTime = (Date.now() - cycleTimer) % FULL_CYCLE;
         let timeLeft;
