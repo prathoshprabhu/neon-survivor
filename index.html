@@ -1543,6 +1543,10 @@
     }
     
     function expandMazeDirection(direction) {
+        // LIMIT map size to prevent freezing
+        const MAX_MAP_SIZE = 80;
+        if (MAP_SIZE >= MAX_MAP_SIZE) return;
+        
         const expandAmount = 12;
         const oldSize = MAP_SIZE;
         
@@ -2245,11 +2249,26 @@
     // Unlimited FPS for smooth gameplay
     const MAX_SHADOW_BLUR = 5; // Reduced for performance - prevents freezing
     
-    function gameLoop() {
+    let lastFrameTime = 0;
+    let frameCount = 0;
+    
+    function gameLoop(currentTime) {
         if (!gameRunning) return;
         
-        update();
-        render();
+        // Skip frame if too soon (cap at ~60fps to prevent overload)
+        if (currentTime - lastFrameTime < 16) {
+            requestAnimationFrame(gameLoop);
+            return;
+        }
+        lastFrameTime = currentTime;
+        
+        try {
+            update();
+            render();
+        } catch (e) {
+            console.error('Game error:', e);
+            // Continue running despite errors
+        }
         
         requestAnimationFrame(gameLoop);
     }
@@ -3521,11 +3540,13 @@
     }
     
     function renderEnemies(bob) {
-        // Sort by distance (far to near)
+        // Sort by distance (far to near) - LIMIT to 15 enemies max
         const sortedEnemies = enemies.map(e => ({
             ...e,
             dist: Math.sqrt((e.x - player.x) ** 2 + (e.y - player.y) ** 2)
-        })).sort((a, b) => b.dist - a.dist);
+        })).filter(e => e.dist < RENDER_DIST * TILE_SIZE)
+          .sort((a, b) => a.dist - b.dist)
+          .slice(0, 15); // MAX 15 enemies rendered
         
         for (const enemy of sortedEnemies) {
             const dx = enemy.x - player.x;
@@ -4235,11 +4256,13 @@
     
     function renderTrees(bob) {
         // Sort trees by distance (far to near) for proper depth
+        // LIMIT to 30 trees max to prevent freezing
         const sortedTrees = trees.map(t => ({
             ...t,
             dist: Math.sqrt((t.x - player.x) ** 2 + (t.y - player.y) ** 2)
         })).filter(t => t.dist < RENDER_DIST * TILE_SIZE && t.dist > TILE_SIZE * 0.5)
-          .sort((a, b) => b.dist - a.dist);
+          .sort((a, b) => a.dist - b.dist) // Near to far for limiting
+          .slice(0, 30); // MAX 30 trees
         
         for (const tree of sortedTrees) {
             const dx = tree.x - player.x;
