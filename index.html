@@ -164,22 +164,24 @@
         #resourceHud {
             bottom: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,20,20,0.8);
             padding: 10px 15px;
             border-radius: 8px;
-            border: 1px solid #88aa44;
+            border: 1px solid #00ffaa;
             font-size: 13px;
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
         }
         
         #baseHud {
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,20,30,0.8);
             padding: 8px 20px;
             border-radius: 8px;
-            border: 1px solid #aa8844;
+            border: 1px solid #00ddff;
             text-align: center;
+            box-shadow: 0 0 15px rgba(0, 221, 255, 0.3);
         }
         
         #petHud {
@@ -423,18 +425,19 @@
         #notification.show { opacity: 1; }
         
         #waveIndicator {
-            top: 20px;
+            top: 70px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,20,25,0.8);
             padding: 10px 25px;
             border-radius: 10px;
-            border: 1px solid var(--neon-purple);
+            border: 1px solid var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.3);
         }
         
-        .wave-text { font-size: 20px; color: var(--neon-purple); text-shadow: 0 0 15px var(--neon-purple); }
-        .wave-enemies { font-size: 12px; color: rgba(255,255,255,0.6); }
+        .wave-text { font-size: 20px; color: var(--neon-green); text-shadow: 0 0 15px var(--neon-green); }
+        .wave-enemies { font-size: 12px; color: var(--neon-cyan); }
         
         #damageOverlay {
             position: absolute;
@@ -570,29 +573,29 @@
     <canvas id="gameCanvas"></canvas>
     
     <div id="startScreen">
-        <h1 class="game-title" style="color: #44aa44;">99 NIGHTS</h1>
-        <p class="game-subtitle" style="color: #88cc88;">SURVIVAL</p>
+        <h1 class="game-title" style="color: #00ffaa; text-shadow: 0 0 30px #00ff88, 0 0 60px #00aa55;">99 NIGHTS</h1>
+        <p class="game-subtitle" style="color: #00ddff;">YEAR 2187 | SECTOR 7</p>
         
-        <div style="color: #88dd88; margin-bottom: 15px; font-size: 15px; text-shadow: 0 0 10px #44aa44;">
-            <p>🌲 SURVIVE 99 DAY/NIGHT CYCLES TO WIN 🌙</p>
-            <p style="font-size: 13px; color: #aaa;">Day: 2 min (safe) | Night: 2 min (DANGER!)</p>
+        <div style="color: #00ffcc; margin-bottom: 15px; font-size: 15px; text-shadow: 0 0 10px #00ff88;">
+            <p>⚡ SURVIVE 99 CYCLES TO ESCAPE ⚡</p>
+            <p style="font-size: 13px; color: #88aacc;">Day: 2 min (recon) | Night: 2 min (THREAT LEVEL: CRITICAL)</p>
         </div>
         
-        <div style="color: #ccaa77; font-size: 12px; margin-bottom: 15px; text-align: left; max-width: 350px; margin: 0 auto 15px auto;">
-            <p>🪵 <b>E</b> to harvest resources | Build your base!</p>
-            <p>🌙 Night creatures: <span style="color:#ff8800">Wendigo, Ram, Yeti, Golem</span></p>
-            <p>⚠️ Random cult attacks during the day!</p>
-            <p>🗺️ Biomes: Forest 80% | Volcanic 10% | Frozen 10%</p>
+        <div style="color: #aabbcc; font-size: 12px; margin-bottom: 15px; text-align: left; max-width: 380px; margin: 0 auto 15px auto; background: rgba(0,50,50,0.3); padding: 12px; border-radius: 8px; border: 1px solid #00aa88;">
+            <p>⚡ <b>E</b> = Harvest resources | Upgrade base</p>
+            <p>🌙 Night entities: <span style="color:#ff4466">Wendigo | Ram | Yeti | Golem</span></p>
+            <p>⚠️ Cult incursions on random days</p>
+            <p>🗺️ Zones: Neon Forest 80% | Molten 10% | Cryo 10%</p>
         </div>
         
-        <p style="color: #88cc88; margin-bottom: 10px; font-family: 'Orbitron', monospace; font-size: 14px;">Controls:</p>
+        <p style="color: #00ffaa; margin-bottom: 10px; font-family: 'Orbitron', monospace; font-size: 14px;">SELECT CONTROL INTERFACE:</p>
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #228822, #115511);" onclick="selectControls('wasd')">WASD</button>
-            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #228822, #115511);" onclick="selectControls('arrows')">ARROW KEYS</button>
+            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #00aa66, #006644); border-color: #00ffaa;" onclick="selectControls('wasd')">WASD</button>
+            <button class="start-button" style="padding: 12px 30px; font-size: 16px; background: linear-gradient(135deg, #00aa66, #006644); border-color: #00ffaa;" onclick="selectControls('arrows')">ARROWS</button>
         </div>
         
-        <div class="controls-info" style="color: #aaddaa; font-size: 11px;">
-            <p>🖱️ Mouse to look | Click to shoot | M = Map</p>
+        <div class="controls-info" style="color: #88ddcc; font-size: 11px;">
+            <p>🖱️ Mouse = Look | Click = Fire | M = Tactical Map</p>
         </div>
     </div>
     
@@ -615,11 +618,11 @@
     </div>
     
     <div id="gameOverScreen">
-        <h1 class="game-title game-over-title" id="gameOverTitle">THE FOREST CLAIMS YOU</h1>
-        <p class="final-score">🌙 NIGHTS SURVIVED: <span id="finalNights">0</span>/99</p>
+        <h1 class="game-title game-over-title" id="gameOverTitle" style="text-shadow: 0 0 30px #ff0044;">SIGNAL LOST</h1>
+        <p class="final-score" style="color: #00ffaa;">⚡ CYCLES SURVIVED: <span id="finalNights">0</span>/99</p>
         <p class="final-score">SCORE: <span id="finalScore">0</span></p>
-        <p class="coins-text">+<span id="coinsEarned">0</span> coins earned!</p>
-        <button class="start-button" style="background: linear-gradient(135deg, #228822, #115511);" onclick="restartGame()">TRY AGAIN</button>
+        <p class="coins-text" style="color: #00ddff;">+<span id="coinsEarned">0</span> credits earned</p>
+        <button class="start-button" style="background: linear-gradient(135deg, #00aa66, #006644); border-color: #00ffaa;" onclick="restartGame()">REINITIALIZE</button>
     </div>
     
     <div id="topHud" class="hud">
@@ -725,63 +728,63 @@
     let mapOffsetX = 0; // For infinite maze
     let mapOffsetY = 0;
     
-    // 99 NIGHTS - Biome System (Forest 80%, Volcanic 10%, Frozen 10%, Cave underground)
+    // 99 NIGHTS - FUTURISTIC Biome System
     const BIOMES = {
-        // FOREST BIOMES (80% of surface)
+        // CYBER FOREST (80% of surface) - Neon-lit alien forest
         forest: { 
-            wallColor: [45, 70, 35], 
-            floorColor: [25, 40, 18], 
-            skyColorDay: '#4488aa',
-            skyColorNight: '#0a1505',
-            name: 'Pine Forest',
-            dayMonster: { name: 'Wolf', color: '#555555', eyeColor: '#ffff00', health: 40, speed: 1.5, damage: 8 },
-            nightMonster: { name: 'Wendigo', color: '#3a2a1a', eyeColor: '#ffff00', health: 120, speed: 2.0, damage: 25 },
+            wallColor: [20, 80, 60], 
+            floorColor: [10, 35, 25], 
+            skyColorDay: '#225566',
+            skyColorNight: '#051510',
+            name: 'Neon Forest',
+            dayMonster: { name: 'Wolf', color: '#445566', eyeColor: '#00ffaa', health: 40, speed: 1.5, damage: 8 },
+            nightMonster: { name: 'Wendigo', color: '#1a2a2a', eyeColor: '#00ff88', health: 120, speed: 2.0, damage: 25 },
             weight: 40
         },
         darkforest: { 
-            wallColor: [30, 50, 25], 
-            floorColor: [15, 30, 12], 
-            skyColorDay: '#3377aa',
-            skyColorNight: '#050a03',
-            name: 'Dark Woods',
-            dayMonster: { name: 'Bear', color: '#4a3020', eyeColor: '#ff8800', health: 100, speed: 0.8, damage: 20 },
-            nightMonster: { name: 'Wendigo', color: '#2a1a0a', eyeColor: '#ff0000', health: 150, speed: 2.2, damage: 30 },
+            wallColor: [15, 50, 40], 
+            floorColor: [8, 25, 18], 
+            skyColorDay: '#1a4455',
+            skyColorNight: '#030a08',
+            name: 'Deep Wilds',
+            dayMonster: { name: 'Bear', color: '#334455', eyeColor: '#ff8800', health: 100, speed: 0.8, damage: 20 },
+            nightMonster: { name: 'Wendigo', color: '#0a1515', eyeColor: '#ff0044', health: 150, speed: 2.2, damage: 30 },
             weight: 40
         },
-        // VOLCANIC HELL (10% of surface)
+        // VOLCANIC CORE (10% of surface) - Molten tech zone
         volcanic: { 
-            wallColor: [90, 40, 20], 
-            floorColor: [50, 25, 10], 
-            skyColorDay: '#aa5533',
-            skyColorNight: '#1a0500',
-            name: 'Volcanic Hell',
+            wallColor: [100, 30, 10], 
+            floorColor: [50, 15, 5], 
+            skyColorDay: '#553311',
+            skyColorNight: '#200800',
+            name: 'Molten Core',
             dayMonster: { name: 'Fire Imp', color: '#ff4400', eyeColor: '#ffff00', health: 50, speed: 1.8, damage: 15 },
-            nightMonster: { name: 'Ram', color: '#440000', eyeColor: '#ff0000', health: 180, speed: 1.5, damage: 35 },
+            nightMonster: { name: 'Ram', color: '#550000', eyeColor: '#ff4400', health: 180, speed: 1.5, damage: 35 },
             weight: 10
         },
-        // FROZEN BADLANDS (10% of surface)
+        // CRYO ZONE (10% of surface) - Frozen tech wasteland
         frozen: { 
-            wallColor: [70, 90, 120], 
-            floorColor: [40, 55, 75], 
-            skyColorDay: '#88aacc',
-            skyColorNight: '#051020',
-            name: 'Frozen Badlands',
-            dayMonster: { name: 'Ice Wolf', color: '#aabbcc', eyeColor: '#00aaff', health: 60, speed: 1.3, damage: 12 },
-            nightMonster: { name: 'Yeti', color: '#ddeeff', eyeColor: '#00ffff', health: 250, speed: 1.0, damage: 40 },
+            wallColor: [50, 80, 120], 
+            floorColor: [25, 40, 65], 
+            skyColorDay: '#335588',
+            skyColorNight: '#081525',
+            name: 'Cryo Zone',
+            dayMonster: { name: 'Ice Wolf', color: '#88aacc', eyeColor: '#00ddff', health: 60, speed: 1.3, damage: 12 },
+            nightMonster: { name: 'Yeti', color: '#aaccee', eyeColor: '#00ffff', health: 250, speed: 1.0, damage: 40 },
             weight: 10
         },
-        // CAVE SYSTEM (underground)
+        // CRYSTAL CAVERNS (underground)
         cave: { 
-            wallColor: [50, 45, 55], 
-            floorColor: [25, 22, 30], 
-            skyColorDay: '#000000',
-            skyColorNight: '#000000',
-            name: 'Cave System',
-            dayMonster: { name: 'Bat Swarm', color: '#2a2a2a', eyeColor: '#ff0000', health: 20, speed: 2.5, damage: 3 },
-            nightMonster: { name: 'Golem', color: '#555566', eyeColor: '#ff00ff', health: 300, speed: 0.6, damage: 50 },
+            wallColor: [40, 35, 60], 
+            floorColor: [20, 18, 35], 
+            skyColorDay: '#000008',
+            skyColorNight: '#000005',
+            name: 'Crystal Depths',
+            dayMonster: { name: 'Bat Swarm', color: '#222233', eyeColor: '#ff00aa', health: 20, speed: 2.5, damage: 3 },
+            nightMonster: { name: 'Golem', color: '#445566', eyeColor: '#aa00ff', health: 300, speed: 0.6, damage: 50 },
             hasDiamonds: true,
             hasResources: true,
-            weight: 0 // Only underground
+            weight: 0
         }
     };
     let biomeMap = []; // Stores biome type for each tile
@@ -1241,14 +1244,14 @@
             }
         }
         
-        // Add terrain features based on biome
+        // Add sparse terrain features (very open world, not maze-like)
         for (let y = 2; y < MAP_SIZE - 2; y++) {
             for (let x = 2; x < MAP_SIZE - 2; x++) {
                 const biome = biomeMap[y][x];
-                let obstacleDensity = 0.03;
-                if (biome === 'darkforest') obstacleDensity = 0.05;
-                else if (biome === 'volcanic') obstacleDensity = 0.04;
-                else if (biome === 'frozen') obstacleDensity = 0.03;
+                let obstacleDensity = 0.015; // Very sparse
+                if (biome === 'darkforest') obstacleDensity = 0.025;
+                else if (biome === 'volcanic') obstacleDensity = 0.02;
+                else if (biome === 'frozen') obstacleDensity = 0.015;
                 
                 if (Math.random() < obstacleDensity) {
                     map[y][x] = 1;
@@ -1994,8 +1997,8 @@
         const coinsEarned = Math.floor(player.score / 5) + (currentNight * 10);
         player.coins += coinsEarned;
         
-        document.getElementById('gameOverTitle').textContent = won ? '🏆 YOU SURVIVED!' : 'THE FOREST CLAIMS YOU';
-        document.getElementById('gameOverTitle').style.color = won ? '#44ff88' : '#ff4444';
+        document.getElementById('gameOverTitle').textContent = won ? '⚡ EXTRACTION COMPLETE ⚡' : 'SIGNAL LOST';
+        document.getElementById('gameOverTitle').style.color = won ? '#00ffaa' : '#ff4444';
         document.getElementById('finalNights').textContent = Math.min(currentNight, NIGHTS_TO_WIN);
         document.getElementById('finalScore').textContent = player.score;
         document.getElementById('coinsEarned').textContent = coinsEarned;
@@ -2005,28 +2008,14 @@
     // ============================================
     // GAME LOOP
     // ============================================
-    // FPS limiting for smooth performance
-    const TARGET_FPS = 60;
-    const FRAME_TIME = 1000 / TARGET_FPS;
-    let lastFrameTime = 0;
-    let deltaTime = 0;
+    // Unlimited FPS for smooth gameplay
+    const MAX_SHADOW_BLUR = 15; // Balanced visual effects
     
-    // Performance mode - reduce visual effects for smoother gameplay
-    const PERF_MODE = true;
-    const MAX_SHADOW_BLUR = PERF_MODE ? 5 : 30;
-    
-    function gameLoop(currentTime) {
+    function gameLoop() {
         if (!gameRunning) return;
         
-        // Calculate delta time and limit FPS
-        deltaTime = currentTime - lastFrameTime;
-        
-        if (deltaTime >= FRAME_TIME) {
-            lastFrameTime = currentTime - (deltaTime % FRAME_TIME);
-            
-            update();
-            render();
-        }
+        update();
+        render();
         
         requestAnimationFrame(gameLoop);
     }
