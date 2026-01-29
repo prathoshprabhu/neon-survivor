@@ -591,11 +591,12 @@
             <p style="font-size: 13px; color: #88aacc;">Day: 2 min (recon) | Night: 2 min (THREAT LEVEL: CRITICAL)</p>
         </div>
         
-        <div style="color: #aabbcc; font-size: 12px; margin-bottom: 15px; text-align: left; max-width: 380px; margin: 0 auto 15px auto; background: rgba(0,50,50,0.3); padding: 12px; border-radius: 8px; border: 1px solid #00aa88;">
-            <p>⚡ <b>E</b> = Harvest resources | Upgrade base</p>
-            <p>🌙 Night entities: <span style="color:#ff4466">Wendigo | Ram | Yeti | Golem</span></p>
-            <p>⚠️ Cult incursions on random days</p>
-            <p>🗺️ Zones: Neon Forest 80% | Molten 10% | Cryo 10%</p>
+        <div style="color: #aabbcc; font-size: 11px; margin-bottom: 15px; text-align: left; max-width: 400px; margin: 0 auto 15px auto; background: rgba(0,50,50,0.3); padding: 12px; border-radius: 8px; border: 1px solid #00aa88;">
+            <p>🪓 <b>AXE</b> = Chop trees | ⛏️ <b>PICKAXE</b> = Mine stone/ore</p>
+            <p>⏫ <b>SPACE</b> = Jump | Explore 3D terrain!</p>
+            <p>❄️ Enter the <b>GLACIER</b> for secret boss</p>
+            <p>🌋 Enter the <b>VOLCANO</b> for fire boss</p>
+            <p>🌲 Abundant trees & caves to explore!</p>
         </div>
         
         <p style="color: #00ffaa; margin-bottom: 10px; font-family: 'Orbitron', monospace; font-size: 14px;">SELECT CONTROL INTERFACE:</p>
@@ -852,21 +853,39 @@
     
     const WEAPONS = [
         { id: 0, name: 'Revolver', icon: '🔫', damage: 25, fireRate: 400, ammo: 1, range: 15, unlocked: true, gunType: 'pistol' },
-        { id: 1, name: 'Knife', icon: '🔪', damage: 50, fireRate: 200, ammo: 0, range: 1.5, unlocked: false, melee: true, gunType: 'knife' },
-        { id: 2, name: '.44 Magnum', icon: '💥', damage: 60, fireRate: 600, ammo: 1, range: 18, unlocked: false, gunType: 'pistol' },
-        { id: 3, name: 'Rifle', icon: '🔫', damage: 20, fireRate: 100, ammo: 1, range: 20, unlocked: false, gunType: 'rifle' },
-        { id: 4, name: 'Sniper', icon: '🎯', damage: 150, fireRate: 1200, ammo: 1, range: 25, unlocked: false, gunType: 'sniper' },
-        { id: 5, name: 'Katana', icon: '⚔️', damage: 80, fireRate: 300, ammo: 0, range: 2, unlocked: false, melee: true, gunType: 'katana' },
-        { id: 6, name: 'Railgun', icon: '⚡', damage: 200, fireRate: 2000, ammo: 5, range: 30, unlocked: false, gunType: 'railgun' },
+        { id: 1, name: 'Axe', icon: '🪓', damage: 30, fireRate: 500, ammo: 0, range: 2, unlocked: true, melee: true, gunType: 'axe', tool: 'wood' },
+        { id: 2, name: 'Pickaxe', icon: '⛏️', damage: 20, fireRate: 500, ammo: 0, range: 2, unlocked: true, melee: true, gunType: 'pickaxe', tool: 'stone' },
+        { id: 3, name: 'Knife', icon: '🔪', damage: 50, fireRate: 200, ammo: 0, range: 1.5, unlocked: false, melee: true, gunType: 'knife' },
+        { id: 4, name: '.44 Magnum', icon: '💥', damage: 60, fireRate: 600, ammo: 1, range: 18, unlocked: false, gunType: 'pistol' },
+        { id: 5, name: 'Rifle', icon: '🔫', damage: 20, fireRate: 100, ammo: 1, range: 20, unlocked: false, gunType: 'rifle' },
+        { id: 6, name: 'Sniper', icon: '🎯', damage: 150, fireRate: 1200, ammo: 1, range: 25, unlocked: false, gunType: 'sniper' },
+        { id: 7, name: 'Katana', icon: '⚔️', damage: 80, fireRate: 300, ammo: 0, range: 2, unlocked: false, melee: true, gunType: 'katana' },
+        { id: 8, name: 'Railgun', icon: '⚡', damage: 200, fireRate: 2000, ammo: 5, range: 30, unlocked: false, gunType: 'railgun' },
     ];
     
     // Player ID System
     let playerID = 'PLR-' + Math.random().toString(36).substr(2, 6).toUpperCase();
     
     // Zoom/Perspective System
-    let zoomLevel = 1.0; // 1.0 = first person, 0.5 = zoomed out
+    let zoomLevel = 1.0;
     const MIN_ZOOM = 0.5;
     const MAX_ZOOM = 2.0;
+    
+    // Jump/3D Terrain System
+    let playerZ = 0; // Height above ground
+    let playerVelZ = 0; // Vertical velocity
+    const GRAVITY = 0.5;
+    const JUMP_POWER = 12;
+    let isGrounded = true;
+    let terrainHeight = []; // Height map for terrain
+    
+    // Special Zones
+    let glacierEntrance = null; // {x, y} position
+    let volcanoEntrance = null;
+    let insideGlacier = false;
+    let insideVolcano = false;
+    let secretBossSpawned = false;
+    let volcanoBossSpawned = false;
     
     // Skins based on perspective
     const PLAYER_SKINS = {
@@ -1201,12 +1220,16 @@
     let lastRegen = 0;
     
     // ============================================
-    // 99 NIGHTS WORLD GENERATION
+    // ROBLOX-STYLE OPEN WORLD GENERATION
     // ============================================
+    let trees = []; // Actual tree objects
+    
     function generateWorld() {
         map = [];
         biomeMap = [];
+        terrainHeight = [];
         diamonds = [];
+        trees = [];
         diamondsCollected = 0;
         currentNight = 1;
         cycleTimer = Date.now();
@@ -1215,22 +1238,30 @@
         cultMembers = [];
         baseLevel = 1;
         baseExp = 0;
-        playerResources = { wood: 5, stone: 5, ironOre: 0, crystal: 0, plank: 0, brick: 0, iron: 0, gem: 0 };
+        playerResources = { wood: 10, stone: 5, ironOre: 0, crystal: 0, plank: 0, brick: 0, iron: 0, gem: 0 };
         craftingStations = [];
         refiners = [];
         resourceNodes = [];
+        insideGlacier = false;
+        insideVolcano = false;
+        secretBossSpawned = false;
+        volcanoBossSpawned = false;
+        playerZ = 0;
+        playerVelZ = 0;
         
-        // Initialize map
+        // Initialize map - OPEN WORLD (no maze!)
         for (let y = 0; y < MAP_SIZE; y++) {
             map[y] = [];
             biomeMap[y] = [];
+            terrainHeight[y] = [];
             for (let x = 0; x < MAP_SIZE; x++) {
-                map[y][x] = 0;
+                map[y][x] = 0; // All open
                 biomeMap[y][x] = 'forest';
+                terrainHeight[y][x] = 0; // Flat terrain base
             }
         }
         
-        // Border walls
+        // Border walls only
         for (let i = 0; i < MAP_SIZE; i++) {
             map[0][i] = 1;
             map[MAP_SIZE-1][i] = 1;
@@ -1238,73 +1269,77 @@
             map[i][MAP_SIZE-1] = 1;
         }
         
-        // Generate biome regions with weights (Forest 80%, Volcanic 10%, Frozen 10%)
-        const biomeSeeds = [];
-        const numBiomes = 12;
+        // ZONE LAYOUT: Forest (center 80%), Frozen Zone (top-right corner), Volcanic Zone (bottom-left corner)
+        const frozenCenterX = MAP_SIZE - 8;
+        const frozenCenterY = 8;
+        const volcanoCenterX = 8;
+        const volcanoCenterY = MAP_SIZE - 8;
+        const zoneRadius = 10;
         
-        for (let i = 0; i < numBiomes; i++) {
-            const roll = Math.random() * 100;
-            let biomeType;
-            if (roll < 80) {
-                biomeType = Math.random() < 0.5 ? 'forest' : 'darkforest';
-            } else if (roll < 90) {
-                biomeType = 'volcanic';
-            } else {
-                biomeType = 'frozen';
-            }
-            
-            biomeSeeds.push({
-                x: 3 + Math.floor(Math.random() * (MAP_SIZE - 6)),
-                y: 3 + Math.floor(Math.random() * (MAP_SIZE - 6)),
-                type: biomeType
-            });
-        }
-        // Starting area is forest
-        biomeSeeds[0] = { x: MAP_SIZE/2, y: MAP_SIZE/2, type: 'forest' };
-        
-        // Assign biomes based on nearest seed
+        // Assign biomes by zones
         for (let y = 0; y < MAP_SIZE; y++) {
             for (let x = 0; x < MAP_SIZE; x++) {
-                let minDist = Infinity;
-                let nearestBiome = 'forest';
-                for (const seed of biomeSeeds) {
-                    const dist = Math.sqrt((x - seed.x) ** 2 + (y - seed.y) ** 2);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        nearestBiome = seed.type;
-                    }
+                const distToFrozen = Math.sqrt((x - frozenCenterX) ** 2 + (y - frozenCenterY) ** 2);
+                const distToVolcano = Math.sqrt((x - volcanoCenterX) ** 2 + (y - volcanoCenterY) ** 2);
+                
+                if (distToFrozen < zoneRadius) {
+                    biomeMap[y][x] = 'frozen';
+                    terrainHeight[y][x] = (zoneRadius - distToFrozen) * 0.5; // Hills
+                } else if (distToVolcano < zoneRadius) {
+                    biomeMap[y][x] = 'volcanic';
+                    terrainHeight[y][x] = (zoneRadius - distToVolcano) * 0.3;
+                } else {
+                    biomeMap[y][x] = Math.random() < 0.3 ? 'darkforest' : 'forest';
                 }
-                biomeMap[y][x] = nearestBiome;
             }
         }
         
-        // Add sparse terrain features (very open world, not maze-like)
+        // GLACIER ENTRANCE in frozen zone
+        glacierEntrance = { x: frozenCenterX, y: frozenCenterY };
+        map[frozenCenterY][frozenCenterX] = 2; // Special tile: glacier entrance
+        
+        // VOLCANO ENTRANCE in volcanic zone
+        volcanoEntrance = { x: volcanoCenterX, y: volcanoCenterY };
+        map[volcanoCenterY][volcanoCenterX] = 3; // Special tile: volcano entrance
+        
+        // Spawn ABUNDANT TREES in forest biomes
         for (let y = 2; y < MAP_SIZE - 2; y++) {
             for (let x = 2; x < MAP_SIZE - 2; x++) {
                 const biome = biomeMap[y][x];
-                let obstacleDensity = 0.015; // Very sparse
-                if (biome === 'darkforest') obstacleDensity = 0.025;
-                else if (biome === 'volcanic') obstacleDensity = 0.02;
-                else if (biome === 'frozen') obstacleDensity = 0.015;
                 
-                if (Math.random() < obstacleDensity) {
-                    map[y][x] = 1;
+                if (biome === 'forest' || biome === 'darkforest') {
+                    // Abundant trees
+                    if (Math.random() < 0.08) {
+                        trees.push({
+                            x: (x + 0.5) * TILE_SIZE,
+                            y: (y + 0.5) * TILE_SIZE,
+                            height: 80 + Math.random() * 60,
+                            trunkWidth: 15 + Math.random() * 10,
+                            foliageSize: 40 + Math.random() * 30,
+                            health: 5,
+                            type: biome === 'darkforest' ? 'dark' : 'normal'
+                        });
+                        map[y][x] = 4; // Tree marker (passable but harvestable)
+                    }
                 }
             }
         }
         
-        // Create CAVE ENTRANCES that lead to underground cave system
-        const numCaves = 3;
+        // Create ABUNDANT CAVES
+        const numCaves = 8;
         for (let c = 0; c < numCaves; c++) {
             const cx = 5 + Math.floor(Math.random() * (MAP_SIZE - 10));
             const cy = 5 + Math.floor(Math.random() * (MAP_SIZE - 10));
-            createCave(cx, cy, 4 + Math.floor(Math.random() * 3));
+            // Don't place caves in special zones
+            if (biomeMap[cy][cx] !== 'frozen' && biomeMap[cy][cx] !== 'volcanic') {
+                createCave(cx, cy, 3 + Math.floor(Math.random() * 3));
+            }
         }
         
-        // Spawn raw resource nodes throughout the world
+        // Spawn stone/ore nodes
         spawnResourceNodes();
         
-        // Clear spawn area (base location)
+        // Clear spawn area
         const spawnX = Math.floor(MAP_SIZE / 2);
         const spawnY = Math.floor(MAP_SIZE / 2);
         for (let dy = -4; dy <= 4; dy++) {
@@ -1312,11 +1347,16 @@
                 if (map[spawnY + dy]) {
                     map[spawnY + dy][spawnX + dx] = 0;
                     biomeMap[spawnY + dy][spawnX + dx] = 'forest';
+                    // Remove trees in spawn
+                    trees = trees.filter(t => {
+                        const tx = Math.floor(t.x / TILE_SIZE);
+                        const ty = Math.floor(t.y / TILE_SIZE);
+                        return !(tx === spawnX + dx && ty === spawnY + dy);
+                    });
                 }
             }
         }
         
-        // Place starting base
         placeBase(spawnX, spawnY);
     }
     
@@ -2187,6 +2227,60 @@
             player.bobPhase += 0.15;
         }
         
+        // JUMPING - Press SPACE to jump
+        if ((keys[' '] || keys['Space']) && isGrounded) {
+            playerVelZ = JUMP_POWER;
+            isGrounded = false;
+        }
+        
+        // Apply gravity
+        if (!isGrounded) {
+            playerVelZ -= GRAVITY;
+            playerZ += playerVelZ;
+            
+            // Get terrain height at player position
+            const tileX = Math.floor(player.x / TILE_SIZE);
+            const tileY = Math.floor(player.y / TILE_SIZE);
+            const groundHeight = (terrainHeight[tileY] && terrainHeight[tileY][tileX]) || 0;
+            
+            if (playerZ <= groundHeight) {
+                playerZ = groundHeight;
+                playerVelZ = 0;
+                isGrounded = true;
+            }
+        }
+        
+        // Check for entering Glacier or Volcano
+        if (glacierEntrance && !insideGlacier) {
+            const distToGlacier = Math.sqrt(
+                (player.x - glacierEntrance.x * TILE_SIZE) ** 2 + 
+                (player.y - glacierEntrance.y * TILE_SIZE) ** 2
+            );
+            if (distToGlacier < TILE_SIZE * 1.5) {
+                insideGlacier = true;
+                showNotification('❄️ ENTERING THE GLACIER - Secret Boss Awaits!');
+                if (!secretBossSpawned) {
+                    spawnGlacierBoss();
+                    secretBossSpawned = true;
+                }
+            }
+        }
+        
+        if (volcanoEntrance && !insideVolcano) {
+            const distToVolcano = Math.sqrt(
+                (player.x - volcanoEntrance.x * TILE_SIZE) ** 2 + 
+                (player.y - volcanoEntrance.y * TILE_SIZE) ** 2
+            );
+            if (distToVolcano < TILE_SIZE * 1.5) {
+                insideVolcano = true;
+                showNotification('🌋 ENTERING THE VOLCANO - Fire Lord Awaits!');
+                if (!volcanoBossSpawned) {
+                    spawnVolcanoBoss();
+                    volcanoBossSpawned = true;
+                }
+            }
+        }
+        
         // Pet regen bonus
         const regenBonus = equippedPet?.bonus?.regen || 0;
         if (regenBonus > 0 && now - lastRegen > 1000) {
@@ -2252,26 +2346,55 @@
             }
         }
         
-        // Harvest resource nodes (press E near them)
-        if (keys['e'] || keys['E']) {
-            for (let i = resourceNodes.length - 1; i >= 0; i--) {
-                const node = resourceNodes[i];
-                const dist = Math.sqrt((node.x - player.x) ** 2 + (node.y - player.y) ** 2);
-                if (dist < 50 && node.amount > 0) {
-                    node.amount--;
-                    playerResources[node.type]++;
-                    baseExp += 2;
-                    
-                    const icons = { wood: '🪵', stone: '🪨', ironOre: '⛏️', crystal: '💎' };
-                    showNotification(`${icons[node.type]} +1 ${node.type.toUpperCase()}`);
-                    
-                    if (node.amount <= 0) {
-                        resourceNodes.splice(i, 1);
+        // Harvest resources with tools (E key or clicking with tool equipped)
+        const currentWeapon = WEAPONS[player.weapon];
+        if (keys['e'] || keys['E'] || (player.shooting && currentWeapon.tool)) {
+            // Harvest TREES with AXE
+            if (currentWeapon.tool === 'wood') {
+                for (let i = trees.length - 1; i >= 0; i--) {
+                    const tree = trees[i];
+                    const dist = Math.sqrt((tree.x - player.x) ** 2 + (tree.y - player.y) ** 2);
+                    if (dist < 60) {
+                        tree.health--;
+                        if (tree.health <= 0) {
+                            playerResources.wood += 3 + Math.floor(Math.random() * 3);
+                            trees.splice(i, 1);
+                            const tx = Math.floor(tree.x / TILE_SIZE);
+                            const ty = Math.floor(tree.y / TILE_SIZE);
+                            if (map[ty]) map[ty][tx] = 0;
+                            showNotification('🪵 +WOOD! Tree felled!');
+                            baseExp += 5;
+                        } else {
+                            showNotification(`🪓 Chopping... (${tree.health} hits left)`);
+                        }
+                        keys['e'] = false;
+                        keys['E'] = false;
+                        break;
                     }
-                    
-                    keys['e'] = false; // Prevent spam
-                    keys['E'] = false;
-                    break;
+                }
+            }
+            
+            // Harvest STONE/ORE with PICKAXE
+            if (currentWeapon.tool === 'stone' || keys['e'] || keys['E']) {
+                for (let i = resourceNodes.length - 1; i >= 0; i--) {
+                    const node = resourceNodes[i];
+                    const dist = Math.sqrt((node.x - player.x) ** 2 + (node.y - player.y) ** 2);
+                    if (dist < 50 && node.amount > 0) {
+                        node.amount--;
+                        playerResources[node.type]++;
+                        baseExp += 2;
+                        
+                        const icons = { wood: '🪵', stone: '🪨', ironOre: '⛏️', crystal: '💎' };
+                        showNotification(`${icons[node.type]} +1 ${node.type.toUpperCase()}`);
+                        
+                        if (node.amount <= 0) {
+                            resourceNodes.splice(i, 1);
+                        }
+                        
+                        keys['e'] = false;
+                        keys['E'] = false;
+                        break;
+                    }
                 }
             }
         }
@@ -2380,7 +2503,10 @@
         const mapX = Math.floor(x / TILE_SIZE);
         const mapY = Math.floor(y / TILE_SIZE);
         if (mapX < 0 || mapX >= MAP_SIZE || mapY < 0 || mapY >= MAP_SIZE) return true;
-        return map[mapY][mapX] === 1;
+        const tile = map[mapY][mapX];
+        // Only solid walls (1) block movement
+        // Trees (4) and special entrances (2, 3) are passable
+        return tile === 1;
     }
     
     function shoot() {
@@ -2478,6 +2604,48 @@
             }
             attempts++;
         }
+    }
+    
+    function spawnGlacierBoss() {
+        // SECRET BOSS: Frost Titan
+        enemies.push({
+            x: glacierEntrance.x * TILE_SIZE,
+            y: glacierEntrance.y * TILE_SIZE - TILE_SIZE * 2,
+            name: 'Frost Titan',
+            color: '#aaddff',
+            eyeColor: '#00ffff',
+            health: 1000,
+            maxHealth: 1000,
+            speed: 0.8,
+            damage: 60,
+            size: 1.5,
+            biome: 'frozen',
+            isBoss: true,
+            score: 5000,
+            lastAttack: 0,
+        });
+        showNotification('⚔️ FROST TITAN AWAKENS!');
+    }
+    
+    function spawnVolcanoBoss() {
+        // BOSS: Fire Lord
+        enemies.push({
+            x: volcanoEntrance.x * TILE_SIZE,
+            y: volcanoEntrance.y * TILE_SIZE - TILE_SIZE * 2,
+            name: 'Fire Lord',
+            color: '#ff2200',
+            eyeColor: '#ffff00',
+            health: 800,
+            maxHealth: 800,
+            speed: 1.2,
+            damage: 50,
+            size: 1.3,
+            biome: 'volcanic',
+            isBoss: true,
+            score: 4000,
+            lastAttack: 0,
+        });
+        showNotification('🔥 FIRE LORD EMERGES!');
     }
     
     function spawnCult() {
@@ -2916,8 +3084,14 @@
         // Render resources
         renderResources(bob);
         
+        // Render TREES (actual tree shapes!)
+        renderTrees(bob);
+        
         // Render resource nodes
         renderResourceNodes(bob);
+        
+        // Render special zone entrances
+        renderSpecialZones(bob);
         
         // Render diamonds
         renderDiamonds(bob);
@@ -3347,6 +3521,211 @@
             ctx.fill();
             
             ctx.restore();
+        }
+    }
+    
+    function renderTrees(bob) {
+        // Sort trees by distance (far to near)
+        const sortedTrees = trees.map(t => ({
+            ...t,
+            dist: Math.sqrt((t.x - player.x) ** 2 + (t.y - player.y) ** 2)
+        })).sort((a, b) => b.dist - a.dist);
+        
+        for (const tree of sortedTrees) {
+            const dx = tree.x - player.x;
+            const dy = tree.y - player.y;
+            const dist = tree.dist;
+            
+            const angleToTree = Math.atan2(dy, dx);
+            let relAngle = angleToTree - player.angle;
+            while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+            while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+            
+            if (Math.abs(relAngle) > FOV / 2 + 0.3) continue;
+            if (dist > RENDER_DIST * TILE_SIZE) continue;
+            
+            const screenCol = Math.floor(canvas.width / 2 + (relAngle / FOV) * canvas.width);
+            if (screenCol >= 0 && screenCol < zBuffer.length && dist > zBuffer[screenCol]) continue;
+            
+            const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+            const scale = (TILE_SIZE / dist) * canvas.height;
+            const treeHeight = (tree.height / TILE_SIZE) * scale;
+            const trunkWidth = (tree.trunkWidth / TILE_SIZE) * scale;
+            const foliageSize = (tree.foliageSize / TILE_SIZE) * scale;
+            const screenY = canvas.height / 2 + bob - playerZ * 3;
+            
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Distance fog
+            const fogAmount = Math.min(0.7, dist / (RENDER_DIST * TILE_SIZE));
+            ctx.globalAlpha = 1 - fogAmount;
+            
+            // TRUNK - brown rectangle
+            ctx.fillStyle = tree.type === 'dark' ? '#3a2a1a' : '#5a3a1a';
+            ctx.fillRect(-trunkWidth / 2, -treeHeight * 0.3, trunkWidth, treeHeight * 0.5);
+            
+            // FOLIAGE - green circles/triangles (layered)
+            const foliageColor = tree.type === 'dark' ? '#1a3a1a' : '#2a5a2a';
+            ctx.fillStyle = foliageColor;
+            
+            // Bottom layer
+            ctx.beginPath();
+            ctx.moveTo(-foliageSize, -treeHeight * 0.2);
+            ctx.lineTo(0, -treeHeight * 0.6);
+            ctx.lineTo(foliageSize, -treeHeight * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Middle layer
+            ctx.beginPath();
+            ctx.moveTo(-foliageSize * 0.8, -treeHeight * 0.45);
+            ctx.lineTo(0, -treeHeight * 0.8);
+            ctx.lineTo(foliageSize * 0.8, -treeHeight * 0.45);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Top layer
+            ctx.beginPath();
+            ctx.moveTo(-foliageSize * 0.5, -treeHeight * 0.65);
+            ctx.lineTo(0, -treeHeight);
+            ctx.lineTo(foliageSize * 0.5, -treeHeight * 0.65);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Highlight
+            ctx.fillStyle = tree.type === 'dark' ? '#2a4a2a' : '#3a6a3a';
+            ctx.beginPath();
+            ctx.arc(foliageSize * 0.2, -treeHeight * 0.6, foliageSize * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+    }
+    
+    function renderSpecialZones(bob) {
+        // Render Glacier entrance
+        if (glacierEntrance) {
+            const dx = glacierEntrance.x * TILE_SIZE - player.x;
+            const dy = glacierEntrance.y * TILE_SIZE - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < RENDER_DIST * TILE_SIZE) {
+                const angleToZone = Math.atan2(dy, dx);
+                let relAngle = angleToZone - player.angle;
+                while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+                while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+                
+                if (Math.abs(relAngle) < FOV / 2 + 0.3) {
+                    const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+                    const scale = (TILE_SIZE * 3 / dist) * canvas.height;
+                    const screenY = canvas.height / 2 + bob - playerZ * 3;
+                    
+                    ctx.save();
+                    ctx.translate(screenX, screenY);
+                    
+                    // Ice crystal structure
+                    ctx.fillStyle = '#aaddff';
+                    ctx.shadowColor = '#00ffff';
+                    ctx.shadowBlur = 20;
+                    
+                    // Main ice spire
+                    ctx.beginPath();
+                    ctx.moveTo(0, -scale);
+                    ctx.lineTo(-scale * 0.4, 0);
+                    ctx.lineTo(scale * 0.4, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Side spires
+                    ctx.beginPath();
+                    ctx.moveTo(-scale * 0.5, -scale * 0.6);
+                    ctx.lineTo(-scale * 0.7, 0);
+                    ctx.lineTo(-scale * 0.3, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(scale * 0.5, -scale * 0.6);
+                    ctx.lineTo(scale * 0.3, 0);
+                    ctx.lineTo(scale * 0.7, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Entrance glow
+                    ctx.fillStyle = 'rgba(0, 200, 255, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(0, -scale * 0.2, scale * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `${Math.max(12, scale * 0.15)}px Orbitron`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('❄️ GLACIER', 0, scale * 0.3);
+                    
+                    ctx.restore();
+                }
+            }
+        }
+        
+        // Render Volcano entrance
+        if (volcanoEntrance) {
+            const dx = volcanoEntrance.x * TILE_SIZE - player.x;
+            const dy = volcanoEntrance.y * TILE_SIZE - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < RENDER_DIST * TILE_SIZE) {
+                const angleToZone = Math.atan2(dy, dx);
+                let relAngle = angleToZone - player.angle;
+                while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+                while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+                
+                if (Math.abs(relAngle) < FOV / 2 + 0.3) {
+                    const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+                    const scale = (TILE_SIZE * 3 / dist) * canvas.height;
+                    const screenY = canvas.height / 2 + bob - playerZ * 3;
+                    
+                    ctx.save();
+                    ctx.translate(screenX, screenY);
+                    
+                    // Volcano mountain
+                    ctx.fillStyle = '#4a2a1a';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -scale * 0.8);
+                    ctx.lineTo(-scale * 0.8, scale * 0.2);
+                    ctx.lineTo(scale * 0.8, scale * 0.2);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Lava glow at top
+                    ctx.fillStyle = '#ff4400';
+                    ctx.shadowColor = '#ff6600';
+                    ctx.shadowBlur = 30;
+                    ctx.beginPath();
+                    ctx.ellipse(0, -scale * 0.7, scale * 0.15, scale * 0.08, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Lava streams
+                    ctx.strokeStyle = '#ff6600';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(-scale * 0.05, -scale * 0.65);
+                    ctx.lineTo(-scale * 0.2, scale * 0.1);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(scale * 0.08, -scale * 0.65);
+                    ctx.lineTo(scale * 0.3, scale * 0.1);
+                    ctx.stroke();
+                    
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `${Math.max(12, scale * 0.15)}px Orbitron`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🌋 VOLCANO', 0, scale * 0.4);
+                    
+                    ctx.restore();
+                }
+            }
         }
     }
     
@@ -3866,12 +4245,60 @@
             ctx.quadraticCurveTo(0, -80, 15, -150);
             ctx.closePath();
             ctx.fill();
-            // Handle wrap
             ctx.fillStyle = '#220000';
             ctx.fillRect(-8, -20, 16, 70);
-            // Guard
             ctx.fillStyle = '#aa8800';
             ctx.fillRect(-20, -25, 40, 8);
+            
+        } else if (gunType === 'axe') {
+            // AXE - wood chopping tool
+            // Handle
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(-8, -20, 16, 100);
+            // Axe head
+            ctx.fillStyle = '#666677';
+            ctx.beginPath();
+            ctx.moveTo(-5, -80);
+            ctx.lineTo(-40, -50);
+            ctx.lineTo(-35, -30);
+            ctx.lineTo(-5, -20);
+            ctx.closePath();
+            ctx.fill();
+            // Blade edge shine
+            ctx.fillStyle = skin.accent;
+            ctx.beginPath();
+            ctx.moveTo(-38, -48);
+            ctx.lineTo(-33, -32);
+            ctx.lineTo(-30, -40);
+            ctx.closePath();
+            ctx.fill();
+            
+        } else if (gunType === 'pickaxe') {
+            // PICKAXE - mining tool
+            // Handle
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(-6, -10, 12, 90);
+            // Pickaxe head (double-sided)
+            ctx.fillStyle = '#555566';
+            // Left pick
+            ctx.beginPath();
+            ctx.moveTo(0, -70);
+            ctx.lineTo(-45, -40);
+            ctx.lineTo(-40, -30);
+            ctx.lineTo(0, -50);
+            ctx.closePath();
+            ctx.fill();
+            // Right pick
+            ctx.beginPath();
+            ctx.moveTo(0, -70);
+            ctx.lineTo(45, -40);
+            ctx.lineTo(40, -30);
+            ctx.lineTo(0, -50);
+            ctx.closePath();
+            ctx.fill();
+            // Center
+            ctx.fillStyle = '#444455';
+            ctx.fillRect(-10, -60, 20, 20);
         }
         
         // Muzzle flash
