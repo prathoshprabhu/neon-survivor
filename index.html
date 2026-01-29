@@ -1323,11 +1323,12 @@
         }
         
         // ZONE LAYOUT: Forest (center 80%), Frozen Zone (top-right corner), Volcanic Zone (bottom-left corner)
-        const frozenCenterX = MAP_SIZE - 8;
-        const frozenCenterY = 8;
-        const volcanoCenterX = 8;
-        const volcanoCenterY = MAP_SIZE - 8;
-        const zoneRadius = 10;
+        // Make zones LARGER and more distinct
+        const frozenCenterX = MAP_SIZE - 12;
+        const frozenCenterY = 12;
+        const volcanoCenterX = 12;
+        const volcanoCenterY = MAP_SIZE - 12;
+        const zoneRadius = 15; // Bigger zones!
         
         // Assign biomes by zones
         for (let y = 0; y < MAP_SIZE; y++) {
@@ -4393,16 +4394,16 @@
             ctx.restore();
         }
         
-        // Render Glacier
-        const glacierLabel = iceTitanUnlocked ? '❄️ ENTER GLACIER' : `❄️ ${10 - iceEnemiesKilled} kills needed`;
-        renderZone(glacierEntrance, '#6699bb', '#99ccee', glacierLabel, '#003366');
+        // Render Glacier - ICY BLUE MOUNTAIN in Frozen Zone
+        const glacierLabel = iceTitanUnlocked ? '❄️ ENTER GLACIER' : `❄️ ${10 - iceEnemiesKilled} Ice kills`;
+        renderZone(glacierEntrance, '#5588aa', '#aaddff', glacierLabel, '#0066aa');
         
-        // Render Volcano  
-        const volcanoLabel = fireLordUnlocked ? '🌋 ENTER VOLCANO' : `🔥 ${10 - fireEnemiesKilled} kills needed`;
-        renderZone(volcanoEntrance, '#4a2a1a', '#6a4030', volcanoLabel, '#ff3300');
+        // Render Volcano - FIERY RED MOUNTAIN in Volcanic Zone
+        const volcanoLabel = fireLordUnlocked ? '🌋 ENTER VOLCANO' : `🔥 ${10 - fireEnemiesKilled} Fire kills`;
+        renderZone(volcanoEntrance, '#662200', '#aa4400', volcanoLabel, '#ff4400');
         
-        // Render Mine Rock
-        renderZone(mineEntranceRock, '#444466', '#6666aa', '⛏️ MINE ENTRANCE', '#220044');
+        // Render Mine Rock - PURPLE CRYSTAL in Forest
+        renderZone(mineEntranceRock, '#443366', '#8866bb', '⛏️ MINE ENTRANCE', '#6633aa');
     }
     
     function renderResourceNodes(bob) {
