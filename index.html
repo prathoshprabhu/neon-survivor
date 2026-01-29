@@ -597,12 +597,13 @@
             <p style="font-size: 14px; opacity: 0.9;">Collect resources, build your base, defeat monsters!</p>
         </div>
         
-        <div style="color: white; font-size: 13px; margin-bottom: 20px; text-align: left; max-width: 400px; background: rgba(255,255,255,0.15); padding: 15px 20px; border-radius: 12px; backdrop-filter: blur(5px);">
+        <div style="color: white; font-size: 13px; margin-bottom: 20px; text-align: left; max-width: 450px; background: rgba(255,255,255,0.15); padding: 15px 20px; border-radius: 12px; backdrop-filter: blur(5px);">
             <p>🪓 <b>AXE</b> = Chop trees | ⛏️ <b>PICKAXE</b> = Mine rocks</p>
-            <p>⏫ <b>SPACE</b> = Jump | Explore the world!</p>
-            <p>❄️ Find the <b>ICE CAVE</b> - Fight the Ice Boss!</p>
-            <p>🌋 Enter the <b>VOLCANO</b> - Battle the Fire Boss!</p>
-            <p>🏠 Build and upgrade your base!</p>
+            <p>⏫ <b>SPACE</b> = Jump | <b>C</b> = Change Camera | <b>V</b> = Weather</p>
+            <p>🔥 Kill 10 Fire enemies to unlock the <b>VOLCANO</b></p>
+            <p>❄️ Kill 10 Ice enemies to unlock the <b>GLACIER</b></p>
+            <p>⛏️ Find the glowing <b>MINE ROCK</b> to enter caves!</p>
+            <p>📷 Camera modes: First-Person, Third-Person, Drone, Top-Down</p>
         </div>
         
         <p style="color: white; margin-bottom: 12px; font-family: 'Fredoka One', cursive; font-size: 16px;">SELECT CONTROLS:</p>
@@ -832,6 +833,22 @@
     // Base building
     let baseLevel = 1;
     let baseExp = 0;
+    
+    // Weather System
+    let currentWeather = 'clear'; // clear, rain, storm, thunder
+    let weatherTimer = 0;
+    let weatherDuration = 60000; // 1 minute weather cycles
+    let raindrops = [];
+    let lightning = { active: false, timer: 0, x: 0 };
+    
+    // Boss Kill Tracking
+    let fireEnemiesKilled = 0;
+    let iceEnemiesKilled = 0;
+    let fireLordUnlocked = false;
+    let iceTitanUnlocked = false;
+    
+    // Mine entrance
+    let mineEntranceRock = null;
     const BASE_EXP_PER_LEVEL = 100;
     
     // Crafting & Resources
@@ -876,6 +893,12 @@
     let zoomLevel = 1.0;
     const MIN_ZOOM = 0.5;
     const MAX_ZOOM = 2.0;
+    
+    // Camera Perspective System
+    const CAMERA_MODES = ['first-person', 'third-person', 'drone', 'top-down'];
+    let cameraMode = 'first-person';
+    let cameraDistance = 150; // For third-person
+    let cameraHeight = 100; // For drone/top-down
     
     // Jump/3D Terrain System
     let playerZ = 0; // Height above ground
@@ -1255,6 +1278,17 @@
         playerZ = 0;
         playerVelZ = 0;
         
+        // Reset boss unlock tracking
+        fireEnemiesKilled = 0;
+        iceEnemiesKilled = 0;
+        fireLordUnlocked = false;
+        iceTitanUnlocked = false;
+        
+        // Reset weather
+        currentWeather = 'clear';
+        raindrops = [];
+        lightning = { active: false, timer: 0, x: 0 };
+        
         // Initialize map - OPEN WORLD (no maze!)
         for (let y = 0; y < MAP_SIZE; y++) {
             map[y] = [];
@@ -1307,6 +1341,12 @@
         // VOLCANO ENTRANCE in volcanic zone
         volcanoEntrance = { x: volcanoCenterX, y: volcanoCenterY };
         map[volcanoCenterY][volcanoCenterX] = 3; // Special tile: volcano entrance
+        
+        // MINE ENTRANCE ROCK - special glowing rock to enter caves
+        const mineX = Math.floor(MAP_SIZE * 0.3);
+        const mineY = Math.floor(MAP_SIZE * 0.3);
+        mineEntranceRock = { x: mineX, y: mineY };
+        map[mineY][mineX] = 4; // Special tile: mine entrance
         
         // Spawn ABUNDANT TREES in forest biomes
         for (let y = 2; y < MAP_SIZE - 2; y++) {
@@ -1687,6 +1727,19 @@
             // M to toggle VR map
             if (e.key === 'm' && gameRunning) {
                 vrMapOpen = !vrMapOpen;
+            }
+            // C to toggle camera mode
+            if (e.key === 'c' && gameRunning) {
+                const currentIdx = CAMERA_MODES.indexOf(cameraMode);
+                cameraMode = CAMERA_MODES[(currentIdx + 1) % CAMERA_MODES.length];
+                showNotification(`📷 Camera: ${cameraMode.toUpperCase()}`);
+            }
+            // V to toggle weather (for testing)
+            if (e.key === 'v' && gameRunning) {
+                const weathers = ['clear', 'rain', 'storm', 'thunder'];
+                const idx = weathers.indexOf(currentWeather);
+                currentWeather = weathers[(idx + 1) % weathers.length];
+                showNotification(`🌤️ Weather: ${currentWeather.toUpperCase()}`);
             }
         });
         document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -2148,6 +2201,9 @@
     function update() {
         const now = Date.now();
         
+        // Update weather system
+        updateWeather();
+        
         // Player movement - SMOOTH and FAST
         const baseSpeed = 6;
         const speedMult = getPetBonus('speed');
@@ -2256,18 +2312,28 @@
             }
         }
         
-        // Check for entering Glacier or Volcano
+        // Check for entering Glacier or Volcano - REQUIRES killing 10 enemies first!
         if (glacierEntrance && !insideGlacier) {
             const distToGlacier = Math.sqrt(
                 (player.x - glacierEntrance.x * TILE_SIZE) ** 2 + 
                 (player.y - glacierEntrance.y * TILE_SIZE) ** 2
             );
-            if (distToGlacier < TILE_SIZE * 1.5) {
-                insideGlacier = true;
-                showNotification('❄️ Entering Ice Cave - Boss Fight!');
-                if (!secretBossSpawned) {
-                    spawnGlacierBoss();
-                    secretBossSpawned = true;
+            if (distToGlacier < TILE_SIZE * 2) {
+                if (iceEnemiesKilled >= 10) {
+                    iceTitanUnlocked = true;
+                    if (distToGlacier < TILE_SIZE * 1.5) {
+                        insideGlacier = true;
+                        showNotification('❄️ THE GLACIER OPENS! Ice Titan Awaits!');
+                        if (!secretBossSpawned) {
+                            spawnGlacierBoss();
+                            secretBossSpawned = true;
+                        }
+                    }
+                } else {
+                    // Show message about needing more kills
+                    if (distToGlacier < TILE_SIZE * 1.5 && Date.now() % 2000 < 50) {
+                        showNotification(`❄️ Kill ${10 - iceEnemiesKilled} more Ice enemies to enter!`);
+                    }
                 }
             }
         }
@@ -2277,12 +2343,22 @@
                 (player.x - volcanoEntrance.x * TILE_SIZE) ** 2 + 
                 (player.y - volcanoEntrance.y * TILE_SIZE) ** 2
             );
-            if (distToVolcano < TILE_SIZE * 1.5) {
-                insideVolcano = true;
-                showNotification('🌋 Entering Volcano - Boss Fight!');
-                if (!volcanoBossSpawned) {
-                    spawnVolcanoBoss();
-                    volcanoBossSpawned = true;
+            if (distToVolcano < TILE_SIZE * 2) {
+                if (fireEnemiesKilled >= 10) {
+                    fireLordUnlocked = true;
+                    if (distToVolcano < TILE_SIZE * 1.5) {
+                        insideVolcano = true;
+                        showNotification('🌋 THE VOLCANO ERUPTS! Fire Lord Emerges!');
+                        if (!volcanoBossSpawned) {
+                            spawnVolcanoBoss();
+                            volcanoBossSpawned = true;
+                        }
+                    }
+                } else {
+                    // Show message about needing more kills
+                    if (distToVolcano < TILE_SIZE * 1.5 && Date.now() % 2000 < 50) {
+                        showNotification(`🔥 Kill ${10 - fireEnemiesKilled} more Fire enemies to enter!`);
+                    }
                 }
             }
         }
@@ -2745,6 +2821,23 @@
         
         enemiesKilled++;
         
+        // Track fire/ice enemy kills for boss unlocks
+        const enemyName = enemy.name || '';
+        if (enemyName === 'FireBird' || enemyName === 'Dragon' || enemyName === 'Fire Lord') {
+            fireEnemiesKilled++;
+            if (fireEnemiesKilled === 10 && !fireLordUnlocked) {
+                showNotification('🔥 VOLCANO UNLOCKED! The Fire Lord awaits!');
+                fireLordUnlocked = true;
+            }
+        }
+        if (enemyName === 'PolarBear' || enemyName === 'Yeti' || enemyName === 'Frost Titan') {
+            iceEnemiesKilled++;
+            if (iceEnemiesKilled === 10 && !iceTitanUnlocked) {
+                showNotification('❄️ GLACIER UNLOCKED! The Ice Titan awaits!');
+                iceTitanUnlocked = true;
+            }
+        }
+        
         // Chance to drop resource
         if (Math.random() < 0.3) {
             const types = ['ammo', 'health', 'shield'];
@@ -3161,8 +3254,141 @@
         // Render minimap
         renderMinimap();
         
+        // Weather effects
+        renderWeather();
+        
+        // Camera mode indicator
+        renderCameraIndicator();
+        
         // VR Map overlay (if open)
         renderVRMap();
+    }
+    
+    // Weather System
+    function updateWeather() {
+        weatherTimer += 16; // Approx 60fps
+        
+        // Random weather changes
+        if (weatherTimer > weatherDuration) {
+            weatherTimer = 0;
+            weatherDuration = 30000 + Math.random() * 60000; // 30-90 seconds
+            
+            // 50% clear, 25% rain, 15% storm, 10% thunder
+            const roll = Math.random();
+            if (roll < 0.5) currentWeather = 'clear';
+            else if (roll < 0.75) currentWeather = 'rain';
+            else if (roll < 0.9) currentWeather = 'storm';
+            else currentWeather = 'thunder';
+        }
+        
+        // Generate raindrops
+        if (currentWeather !== 'clear') {
+            if (raindrops.length < 200) {
+                raindrops.push({
+                    x: Math.random() * canvas.width,
+                    y: -10,
+                    speed: 8 + Math.random() * 8,
+                    length: 10 + Math.random() * 20
+                });
+            }
+        }
+        
+        // Update raindrops
+        for (let i = raindrops.length - 1; i >= 0; i--) {
+            raindrops[i].y += raindrops[i].speed;
+            raindrops[i].x += (currentWeather === 'storm' || currentWeather === 'thunder') ? 3 : 0;
+            if (raindrops[i].y > canvas.height) {
+                raindrops.splice(i, 1);
+            }
+        }
+        
+        // Lightning
+        if (currentWeather === 'thunder') {
+            if (!lightning.active && Math.random() < 0.005) {
+                lightning.active = true;
+                lightning.timer = 10;
+                lightning.x = Math.random() * canvas.width;
+                // Play thunder sound
+                if (audioCtx) {
+                    const thunder = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    thunder.type = 'sawtooth';
+                    thunder.frequency.value = 60;
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialDecayTo && gain.gain.exponentialDecayTo(0.01, audioCtx.currentTime + 1);
+                    thunder.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    thunder.start();
+                    thunder.stop(audioCtx.currentTime + 0.5);
+                }
+            }
+            if (lightning.active) {
+                lightning.timer--;
+                if (lightning.timer <= 0) lightning.active = false;
+            }
+        }
+    }
+    
+    function renderWeather() {
+        if (currentWeather === 'clear') return;
+        
+        // Darken screen for storms
+        if (currentWeather === 'storm' || currentWeather === 'thunder') {
+            ctx.fillStyle = 'rgba(0, 0, 30, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Rain
+        if (currentWeather !== 'clear') {
+            ctx.strokeStyle = currentWeather === 'thunder' ? 'rgba(200, 220, 255, 0.6)' : 'rgba(150, 180, 220, 0.5)';
+            ctx.lineWidth = 1;
+            for (const drop of raindrops) {
+                ctx.beginPath();
+                ctx.moveTo(drop.x, drop.y);
+                ctx.lineTo(drop.x + (currentWeather === 'storm' ? 5 : 0), drop.y + drop.length);
+                ctx.stroke();
+            }
+        }
+        
+        // Lightning flash
+        if (lightning.active) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + Math.random() * 0.3})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Lightning bolt
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#aaddff';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.moveTo(lightning.x, 0);
+            let y = 0;
+            while (y < canvas.height * 0.6) {
+                y += 30 + Math.random() * 50;
+                ctx.lineTo(lightning.x + (Math.random() - 0.5) * 60, y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+        
+        // Weather indicator
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(10, canvas.height - 40, 100, 30);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px Fredoka One';
+        const weatherIcons = { clear: '☀️', rain: '🌧️', storm: '⛈️', thunder: '⚡' };
+        ctx.fillText(`${weatherIcons[currentWeather]} ${currentWeather.toUpperCase()}`, 20, canvas.height - 20);
+    }
+    
+    function renderCameraIndicator() {
+        // Show current camera mode
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(canvas.width - 150, canvas.height - 40, 140, 30);
+        ctx.fillStyle = '#00d460';
+        ctx.font = '12px Fredoka One';
+        ctx.textAlign = 'right';
+        ctx.fillText(`📷 ${cameraMode.toUpperCase()}`, canvas.width - 20, canvas.height - 20);
+        ctx.textAlign = 'left';
     }
     
     function renderEnemies(bob) {
@@ -3958,13 +4184,15 @@
     }
     
     function renderSpecialZones(bob) {
-        // Render Glacier entrance
+        // NOTE: bob removed from mountains to prevent "jumping" effect
+        
+        // Render GLACIER MOUNTAIN - Tall ice mountain that rises from ground
         if (glacierEntrance) {
             const dx = glacierEntrance.x * TILE_SIZE - player.x;
             const dy = glacierEntrance.y * TILE_SIZE - player.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             
-            if (dist < RENDER_DIST * TILE_SIZE) {
+            if (dist < RENDER_DIST * TILE_SIZE * 1.5) {
                 const angleToZone = Math.atan2(dy, dx);
                 let relAngle = angleToZone - player.angle;
                 while (relAngle > Math.PI) relAngle -= Math.PI * 2;
@@ -3972,63 +4200,86 @@
                 
                 if (Math.abs(relAngle) < FOV / 2 + 0.3) {
                     const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-                    const scale = (TILE_SIZE * 3 / dist) * canvas.height;
-                    const screenY = canvas.height / 2 + bob - playerZ * 3;
+                    const mountainHeight = (TILE_SIZE * 8 / dist) * canvas.height; // MUCH taller
+                    const mountainWidth = mountainHeight * 1.2;
+                    const baseY = canvas.height / 2 + (TILE_SIZE * 0.5 / dist) * canvas.height; // Grounded
                     
                     ctx.save();
-                    ctx.translate(screenX, screenY);
+                    ctx.translate(screenX, baseY);
                     
-                    // Ice crystal structure
+                    // TALL ICE MOUNTAIN - multiple layers for depth
+                    // Back layer (darker)
+                    ctx.fillStyle = '#6699bb';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -mountainHeight * 1.1);
+                    ctx.lineTo(-mountainWidth * 0.6, 0);
+                    ctx.lineTo(mountainWidth * 0.6, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Main mountain
+                    ctx.fillStyle = '#88bbdd';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -mountainHeight);
+                    ctx.lineTo(-mountainWidth * 0.5, 0);
+                    ctx.lineTo(mountainWidth * 0.5, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Snow cap
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -mountainHeight);
+                    ctx.lineTo(-mountainWidth * 0.15, -mountainHeight * 0.7);
+                    ctx.lineTo(mountainWidth * 0.15, -mountainHeight * 0.7);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Ice crystals at peak
                     ctx.fillStyle = '#aaddff';
                     ctx.shadowColor = '#00ffff';
-                    ctx.shadowBlur = 20;
-                    
-                    // Main ice spire
+                    ctx.shadowBlur = 15;
                     ctx.beginPath();
-                    ctx.moveTo(0, -scale);
-                    ctx.lineTo(-scale * 0.4, 0);
-                    ctx.lineTo(scale * 0.4, 0);
+                    ctx.moveTo(0, -mountainHeight * 1.15);
+                    ctx.lineTo(-mountainWidth * 0.05, -mountainHeight);
+                    ctx.lineTo(mountainWidth * 0.05, -mountainHeight);
                     ctx.closePath();
                     ctx.fill();
                     
-                    // Side spires
+                    // Cave entrance at base
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = '#003355';
                     ctx.beginPath();
-                    ctx.moveTo(-scale * 0.5, -scale * 0.6);
-                    ctx.lineTo(-scale * 0.7, 0);
-                    ctx.lineTo(-scale * 0.3, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(scale * 0.5, -scale * 0.6);
-                    ctx.lineTo(scale * 0.3, 0);
-                    ctx.lineTo(scale * 0.7, 0);
-                    ctx.closePath();
+                    ctx.ellipse(0, -mountainHeight * 0.1, mountainWidth * 0.12, mountainHeight * 0.15, 0, Math.PI, 0);
                     ctx.fill();
                     
                     // Entrance glow
-                    ctx.fillStyle = 'rgba(0, 200, 255, 0.5)';
+                    ctx.fillStyle = 'rgba(0, 200, 255, 0.4)';
                     ctx.beginPath();
-                    ctx.arc(0, -scale * 0.2, scale * 0.2, 0, Math.PI * 2);
+                    ctx.ellipse(0, -mountainHeight * 0.1, mountainWidth * 0.08, mountainHeight * 0.1, 0, Math.PI, 0);
                     ctx.fill();
                     
+                    // Label
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = `${Math.max(12, scale * 0.15)}px Orbitron`;
+                    ctx.font = `bold ${Math.max(14, mountainHeight * 0.08)}px Fredoka One`;
                     ctx.textAlign = 'center';
-                    ctx.fillText('❄️ GLACIER', 0, scale * 0.3);
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 5;
+                    const statusText = iceTitanUnlocked ? '❄️ ENTER GLACIER' : `❄️ Kill ${10 - iceEnemiesKilled} Ice enemies`;
+                    ctx.fillText(statusText, 0, mountainHeight * 0.15);
                     
                     ctx.restore();
                 }
             }
         }
         
-        // Render Volcano entrance
+        // Render VOLCANO MOUNTAIN - Tall fiery mountain
         if (volcanoEntrance) {
             const dx = volcanoEntrance.x * TILE_SIZE - player.x;
             const dy = volcanoEntrance.y * TILE_SIZE - player.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             
-            if (dist < RENDER_DIST * TILE_SIZE) {
+            if (dist < RENDER_DIST * TILE_SIZE * 1.5) {
                 const angleToZone = Math.atan2(dy, dx);
                 let relAngle = angleToZone - player.angle;
                 while (relAngle > Math.PI) relAngle -= Math.PI * 2;
@@ -4036,46 +4287,158 @@
                 
                 if (Math.abs(relAngle) < FOV / 2 + 0.3) {
                     const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
-                    const scale = (TILE_SIZE * 3 / dist) * canvas.height;
-                    const screenY = canvas.height / 2 + bob - playerZ * 3;
+                    const mountainHeight = (TILE_SIZE * 8 / dist) * canvas.height; // MUCH taller
+                    const mountainWidth = mountainHeight * 1.3;
+                    const baseY = canvas.height / 2 + (TILE_SIZE * 0.5 / dist) * canvas.height; // Grounded
                     
                     ctx.save();
-                    ctx.translate(screenX, screenY);
+                    ctx.translate(screenX, baseY);
                     
-                    // Volcano mountain
-                    ctx.fillStyle = '#4a2a1a';
+                    // TALL VOLCANO - dark rocky mountain
+                    // Back layer
+                    ctx.fillStyle = '#2a1a0a';
                     ctx.beginPath();
-                    ctx.moveTo(0, -scale * 0.8);
-                    ctx.lineTo(-scale * 0.8, scale * 0.2);
-                    ctx.lineTo(scale * 0.8, scale * 0.2);
+                    ctx.moveTo(0, -mountainHeight * 1.05);
+                    ctx.lineTo(-mountainWidth * 0.55, 0);
+                    ctx.lineTo(mountainWidth * 0.55, 0);
                     ctx.closePath();
                     ctx.fill();
                     
-                    // Lava glow at top
-                    ctx.fillStyle = '#ff4400';
-                    ctx.shadowColor = '#ff6600';
-                    ctx.shadowBlur = 30;
+                    // Main volcano body
+                    ctx.fillStyle = '#3a2515';
                     ctx.beginPath();
-                    ctx.ellipse(0, -scale * 0.7, scale * 0.15, scale * 0.08, 0, 0, Math.PI * 2);
+                    ctx.moveTo(0, -mountainHeight);
+                    ctx.lineTo(-mountainWidth * 0.5, 0);
+                    ctx.lineTo(mountainWidth * 0.5, 0);
+                    ctx.closePath();
                     ctx.fill();
                     
-                    // Lava streams
-                    ctx.strokeStyle = '#ff6600';
-                    ctx.lineWidth = 3;
+                    // Crater at top
+                    ctx.fillStyle = '#1a0a00';
                     ctx.beginPath();
-                    ctx.moveTo(-scale * 0.05, -scale * 0.65);
-                    ctx.lineTo(-scale * 0.2, scale * 0.1);
+                    ctx.ellipse(0, -mountainHeight * 0.95, mountainWidth * 0.1, mountainHeight * 0.03, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // LAVA GLOW from crater
+                    ctx.fillStyle = '#ff4400';
+                    ctx.shadowColor = '#ff6600';
+                    ctx.shadowBlur = 40;
+                    ctx.beginPath();
+                    ctx.ellipse(0, -mountainHeight * 0.92, mountainWidth * 0.08, mountainHeight * 0.02, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Animated smoke/fire from top
+                    const smokeOffset = Math.sin(Date.now() * 0.003) * 5;
+                    ctx.fillStyle = 'rgba(255, 100, 0, 0.6)';
+                    ctx.beginPath();
+                    ctx.ellipse(smokeOffset, -mountainHeight * 1.05, mountainWidth * 0.06, mountainHeight * 0.08, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Lava streams down the side
+                    ctx.strokeStyle = '#ff6600';
+                    ctx.shadowBlur = 15;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(-mountainWidth * 0.02, -mountainHeight * 0.9);
+                    ctx.quadraticCurveTo(-mountainWidth * 0.15, -mountainHeight * 0.5, -mountainWidth * 0.25, 0);
                     ctx.stroke();
                     ctx.beginPath();
-                    ctx.moveTo(scale * 0.08, -scale * 0.65);
-                    ctx.lineTo(scale * 0.3, scale * 0.1);
+                    ctx.moveTo(mountainWidth * 0.03, -mountainHeight * 0.9);
+                    ctx.quadraticCurveTo(mountainWidth * 0.2, -mountainHeight * 0.4, mountainWidth * 0.35, 0);
                     ctx.stroke();
                     
+                    // Cave entrance at base
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = '#0a0500';
+                    ctx.beginPath();
+                    ctx.ellipse(0, -mountainHeight * 0.08, mountainWidth * 0.1, mountainHeight * 0.12, 0, Math.PI, 0);
+                    ctx.fill();
+                    
+                    // Lava glow at entrance
+                    ctx.fillStyle = 'rgba(255, 100, 0, 0.5)';
+                    ctx.beginPath();
+                    ctx.ellipse(0, -mountainHeight * 0.08, mountainWidth * 0.06, mountainHeight * 0.08, 0, Math.PI, 0);
+                    ctx.fill();
+                    
+                    // Label
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `bold ${Math.max(14, mountainHeight * 0.08)}px Fredoka One`;
+                    ctx.textAlign = 'center';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 5;
+                    const statusText = fireLordUnlocked ? '🌋 ENTER VOLCANO' : `🔥 Kill ${10 - fireEnemiesKilled} Fire enemies`;
+                    ctx.fillText(statusText, 0, mountainHeight * 0.15);
+                    
+                    ctx.restore();
+                }
+            }
+        }
+        
+        // Render MINE ENTRANCE ROCK - glowing crystal to enter caves
+        if (mineEntranceRock) {
+            const dx = mineEntranceRock.x * TILE_SIZE - player.x;
+            const dy = mineEntranceRock.y * TILE_SIZE - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < RENDER_DIST * TILE_SIZE) {
+                const angleToRock = Math.atan2(dy, dx);
+                let relAngle = angleToRock - player.angle;
+                while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+                while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+                
+                if (Math.abs(relAngle) < FOV / 2 + 0.3) {
+                    const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
+                    const rockSize = (TILE_SIZE * 2 / dist) * canvas.height;
+                    const baseY = canvas.height / 2 + (TILE_SIZE * 0.3 / dist) * canvas.height;
+                    
+                    ctx.save();
+                    ctx.translate(screenX, baseY);
+                    
+                    // Glowing crystal rock formation
+                    const glowPulse = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
+                    
+                    // Rock base
+                    ctx.fillStyle = '#444444';
+                    ctx.beginPath();
+                    ctx.ellipse(0, rockSize * 0.1, rockSize * 0.4, rockSize * 0.2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Crystal formations
+                    ctx.fillStyle = `rgba(150, 100, 255, ${glowPulse})`;
+                    ctx.shadowColor = '#aa66ff';
+                    ctx.shadowBlur = 25;
+                    
+                    // Center crystal
+                    ctx.beginPath();
+                    ctx.moveTo(0, -rockSize * 0.8);
+                    ctx.lineTo(-rockSize * 0.15, rockSize * 0.1);
+                    ctx.lineTo(rockSize * 0.15, rockSize * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Side crystals
+                    ctx.beginPath();
+                    ctx.moveTo(-rockSize * 0.25, -rockSize * 0.5);
+                    ctx.lineTo(-rockSize * 0.35, rockSize * 0.1);
+                    ctx.lineTo(-rockSize * 0.15, rockSize * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(rockSize * 0.25, -rockSize * 0.5);
+                    ctx.lineTo(rockSize * 0.15, rockSize * 0.1);
+                    ctx.lineTo(rockSize * 0.35, rockSize * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Label
                     ctx.shadowBlur = 0;
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = `${Math.max(12, scale * 0.15)}px Orbitron`;
+                    ctx.font = `bold ${Math.max(12, rockSize * 0.12)}px Fredoka One`;
                     ctx.textAlign = 'center';
-                    ctx.fillText('🌋 VOLCANO', 0, scale * 0.4);
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 5;
+                    ctx.fillText('⛏️ MINE ENTRANCE', 0, rockSize * 0.35);
                     
                     ctx.restore();
                 }
