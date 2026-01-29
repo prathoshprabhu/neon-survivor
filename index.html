@@ -2243,7 +2243,7 @@
     // GAME LOOP
     // ============================================
     // Unlimited FPS for smooth gameplay
-    const MAX_SHADOW_BLUR = 15; // Balanced visual effects
+    const MAX_SHADOW_BLUR = 5; // Reduced for performance - prevents freezing
     
     function gameLoop() {
         if (!gameRunning) return;
@@ -3488,7 +3488,7 @@
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 3;
             ctx.shadowColor = '#aaddff';
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 5;
             ctx.beginPath();
             ctx.moveTo(lightning.x, 0);
             let y = 0;
@@ -3548,9 +3548,7 @@
             // Size based on distance
             const spriteHeight = (TILE_SIZE * enemy.size / dist) * canvas.height;
             const spriteWidth = spriteHeight * 0.6;
-            // When player jumps, look DOWN at enemies (they appear lower)
-            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
-            const spriteY = canvas.height / 2 - spriteHeight / 2 + bob + jumpOffset;
+            const spriteY = canvas.height / 2 - spriteHeight / 2 + bob;
             
             // CHECK OCCLUSION - is enemy behind a wall?
             const spriteScreenStart = Math.floor(screenX - spriteWidth / 2);
@@ -4209,8 +4207,7 @@
             
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const size = (TILE_SIZE * 0.4 / dist) * canvas.height;
-            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
-            const screenY = canvas.height / 2 + bob + jumpOffset;
+            const screenY = canvas.height / 2 + bob;
             
             ctx.save();
             ctx.translate(screenX, screenY);
@@ -4263,11 +4260,9 @@
             const trunkWidth = scale * 0.15;
             const foliageSize = scale * 0.4;
             
-            // 3D VERTICAL POSITION - trees stay stationary, player view moves
+            // 3D VERTICAL POSITION - trees stay stationary
             const verticalOffset = (dist / (RENDER_DIST * TILE_SIZE)) * canvas.height * 0.15;
-            // Trees move UP when player jumps (player looking down at them)
-            const jumpOffset = Math.min(150, playerZ * (200 / dist)); // Capped jump offset
-            const screenY = canvas.height / 2 + verticalOffset + bob + jumpOffset;
+            const screenY = canvas.height / 2 + verticalOffset + bob;
             
             ctx.save();
             ctx.translate(screenX, screenY);
@@ -4369,8 +4364,7 @@
             
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const size = Math.min(200, (TILE_SIZE * 3 / dist) * 200);
-            const jumpOffset = Math.min(100, playerZ * (200 / dist));
-            const baseY = canvas.height / 2 + size * 0.3 + jumpOffset;
+            const baseY = canvas.height / 2 + size * 0.3;
             
             ctx.save();
             ctx.translate(screenX, baseY);
@@ -4439,8 +4433,7 @@
             
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const size = (TILE_SIZE * 0.4 / dist) * canvas.height;
-            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
-            const screenY = canvas.height / 2 + bob + size * 0.3 + jumpOffset;
+            const screenY = canvas.height / 2 + bob + size * 0.3;
             
             ctx.save();
             ctx.translate(screenX, screenY);
@@ -4510,8 +4503,7 @@
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const size = (TILE_SIZE * 0.5 / dist) * canvas.height;
             const floatY = Math.sin(time + diamond.sparkle) * 5;
-            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
-            const screenY = canvas.height / 2 + bob + floatY + jumpOffset;
+            const screenY = canvas.height / 2 + bob + floatY;
             
             ctx.save();
             ctx.translate(screenX, screenY);
@@ -4521,7 +4513,7 @@
             
             // Draw diamond shape
             ctx.shadowColor = '#00ffff';
-            ctx.shadowBlur = 30 * sparkle;
+            ctx.shadowBlur = 5;
             
             // Diamond gradient
             const grad = ctx.createLinearGradient(-size/2, -size/2, size/2, size/2);
@@ -4579,8 +4571,7 @@
             const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
             const personHeight = (TILE_SIZE * 1.5 / dist) * canvas.height;
             const personWidth = personHeight * 0.5;
-            const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
-            const screenY = canvas.height / 2 + bob + jumpOffset;
+            const screenY = canvas.height / 2 + bob;
             
             ctx.save();
             ctx.translate(screenX, screenY);
@@ -4685,8 +4676,7 @@
         const screenX = canvas.width / 2 + (relAngle / FOV) * canvas.width;
         const size = (TILE_SIZE * 0.6 / dist) * canvas.height;
         const breathe = Math.sin(Date.now() * 0.003) * size * 0.05;
-        const jumpOffset = Math.min(150, playerZ * (200 / Math.max(dist, 50)));
-        const screenY = canvas.height / 2 + bob + breathe + jumpOffset;
+        const screenY = canvas.height / 2 + bob + breathe;
         
         ctx.save();
         ctx.translate(screenX, screenY);
@@ -4795,7 +4785,7 @@
             
             // Eyes
             ctx.fillStyle = glow;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 3;
             ctx.beginPath();
             ctx.arc(size * 0.35, -size * 0.08, size * 0.03, 0, Math.PI * 2);
             ctx.fill();
@@ -4839,7 +4829,7 @@
             // Glowing eye
             ctx.fillStyle = '#ffffff';
             ctx.shadowColor = '#ffff00';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 5;
             ctx.beginPath();
             ctx.arc(size * 0.3, -size * 0.12, size * 0.03, 0, Math.PI * 2);
             ctx.fill();
@@ -4867,7 +4857,7 @@
             ctx.fill();
             // Eyes
             ctx.fillStyle = glow;
-            ctx.shadowBlur = 12;
+            ctx.shadowBlur = 5;
             ctx.beginPath();
             ctx.arc(size * 0.22, -size * 0.12, size * 0.035, 0, Math.PI * 2);
             ctx.arc(size * 0.32, -size * 0.1, size * 0.03, 0, Math.PI * 2);
@@ -4924,7 +4914,7 @@
         
         // Gun glow based on skin
         ctx.shadowColor = skin.accent;
-        ctx.shadowBlur = player.shooting ? 25 : 8;
+        ctx.shadowBlur = player.shooting ? 5 : 3;
         
         const gunType = weapon.gunType || 'pistol';
         
@@ -5010,7 +5000,7 @@
             ctx.fillRect(8, -140, 6, 135);
             // Energy glow
             ctx.fillStyle = skin.accent;
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 5;
             ctx.fillRect(-2, -130, 10, 120);
             // Grip
             ctx.shadowBlur = 0;
@@ -5104,7 +5094,7 @@
         if (player.shooting && player.shootFrame < 5 && !weapon.melee) {
             ctx.fillStyle = '#ffaa00';
             ctx.shadowColor = '#ff6600';
-            ctx.shadowBlur = 30;
+            ctx.shadowBlur = 5;
             ctx.beginPath();
             ctx.moveTo(0, -180);
             ctx.lineTo(-25, -130);
@@ -5198,7 +5188,7 @@
         // Draw diamonds (important!)
         miniCtx.fillStyle = '#00ffff';
         miniCtx.shadowColor = '#00ffff';
-        miniCtx.shadowBlur = 8;
+        miniCtx.shadowBlur = 3;
         for (const diamond of diamonds) {
             if (diamond.collected) continue;
             const dx = 75 + (diamond.x / TILE_SIZE - playerTileX) * tileSize;
@@ -5219,7 +5209,7 @@
         // Draw player (always center)
         miniCtx.fillStyle = '#00f7ff';
         miniCtx.shadowColor = '#00f7ff';
-        miniCtx.shadowBlur = 8;
+        miniCtx.shadowBlur = 3;
         miniCtx.beginPath();
         miniCtx.arc(75, 75, 5, 0, Math.PI * 2);
         miniCtx.fill();
@@ -5237,7 +5227,7 @@
         // Circular border
         miniCtx.strokeStyle = '#00f7ff';
         miniCtx.lineWidth = 2;
-        miniCtx.shadowBlur = 10;
+        miniCtx.shadowBlur = 3;
         miniCtx.beginPath();
         miniCtx.arc(75, 75, 72, 0, Math.PI * 2);
         miniCtx.stroke();
@@ -5362,7 +5352,7 @@
         }
         
         // Draw resources
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 5;
         for (const res of resources) {
             const rx = centerX + (res.x / TILE_SIZE - playerTileX) * tileSize;
             const ry = centerY + (res.y / TILE_SIZE - playerTileY) * tileSize;
