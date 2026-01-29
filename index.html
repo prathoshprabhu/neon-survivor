@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>I Survived 99 Nights</title>
+    <title>The 99 Survival</title>
     <link rel="icon" type="image/jpeg" href="logo.jpg">
     <link rel="apple-touch-icon" href="logo.jpg">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
@@ -265,6 +265,72 @@
         .crosshair-line.bottom { width: 2px; height: 12px; bottom: -18px; left: 1px; }
         .crosshair-line.left { width: 12px; height: 2px; left: -18px; top: 1px; }
         .crosshair-line.right { width: 12px; height: 2px; right: -18px; top: 1px; }
+        
+        #loadingScreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #1a0a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            animation: logo-pulse 2s ease-in-out infinite;
+            box-shadow: 0 0 40px rgba(255, 100, 100, 0.5);
+        }
+        
+        @keyframes logo-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 100, 100, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 0 60px rgba(255, 100, 100, 0.8); }
+        }
+        
+        .loading-text {
+            margin-top: 30px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 24px;
+            color: #ff6644;
+            text-shadow: 0 0 20px rgba(255, 100, 68, 0.6);
+            letter-spacing: 4px;
+        }
+        
+        .loading-bar-container {
+            margin-top: 20px;
+            width: 200px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff3333, #ff6644, #ffcc00);
+            border-radius: 3px;
+            animation: loading-progress 10s linear forwards;
+        }
+        
+        @keyframes loading-progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        
+        .loading-tip {
+            margin-top: 40px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            max-width: 300px;
+        }
         
         #startScreen, #gameOverScreen, #petShopScreen {
             position: absolute;
@@ -598,7 +664,16 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     
-    <div id="startScreen">
+    <div id="loadingScreen">
+        <img src="logo.jpg" alt="The 99 Survival" class="loading-logo">
+        <div class="loading-text">LOADING...</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar"></div>
+        </div>
+        <div class="loading-tip">Prepare to survive the darkness...</div>
+    </div>
+    
+    <div id="startScreen" style="display: none;">
         <h1 class="game-title" style="color: #ff3333; text-shadow: 0 0 30px #ff0000, 0 0 60px #990000, 4px 4px 0 #330000;">I SURVIVED 99 NIGHTS</h1>
         <p class="game-subtitle" style="color: #ffcc00; letter-spacing: 6px;">A SURVIVAL HORROR EXPERIENCE</p>
         
@@ -758,6 +833,14 @@
     </div>
 
     <script>
+    // ============================================
+    // LOADING SCREEN - 10 SECOND DELAY
+    // ============================================
+    setTimeout(() => {
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('startScreen').style.display = 'flex';
+    }, 10000);
+    
     // ============================================
     // GAME CONFIGURATION
     // ============================================
